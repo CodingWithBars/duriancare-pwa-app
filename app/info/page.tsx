@@ -16,7 +16,6 @@ export default function InfoPage() {
   return (
     <div className="flex flex-col gap-8 p-6 bg-white">
       
-      {/* Hero Section */}
       <section className="space-y-3">
         <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 mb-4 shadow-sm shadow-emerald-100">
           <Info size={24} />
@@ -28,7 +27,6 @@ export default function InfoPage() {
         </p>
       </section>
 
-      {/* Settings Section */}
       <section className="space-y-4">
         <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
           <Settings size={14} />
@@ -36,7 +34,6 @@ export default function InfoPage() {
         </h3>
         
         <div className="bg-slate-50 rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-          {/* Haptic Toggle */}
           <div className="flex items-center justify-between p-5 border-b border-white">
             <div className="flex items-center gap-4">
               <div className="p-2.5 bg-white rounded-2xl text-slate-600 border border-slate-100 shadow-sm">
@@ -55,7 +52,6 @@ export default function InfoPage() {
             </button>
           </div>
 
-          {/* Reset Action */}
           <button 
             onClick={handleResetApp}
             className="w-full flex items-center gap-4 p-5 text-rose-500 active:bg-rose-50 transition-all"
@@ -71,14 +67,11 @@ export default function InfoPage() {
         </div>
       </section>
 
-      {/* Technical Breakdown */}
       <section className="space-y-4">
         <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
           <Cpu size={14} />
           Model Architecture
         </h3>
-        
-        
         
         <div className="bg-slate-50 rounded-[32px] p-6 border border-slate-100 shadow-sm">
           <div className="space-y-6">
@@ -107,7 +100,6 @@ export default function InfoPage() {
         </div>
       </section>
 
-      {/* Security Info */}
       <section className="bg-slate-900 rounded-[32px] p-6 text-white shadow-xl shadow-slate-200">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 bg-emerald-500 rounded-lg">
@@ -122,7 +114,7 @@ export default function InfoPage() {
 
       <footer className="pt-8 pb-4">
         <p className="text-center text-slate-400 text-[10px] font-black uppercase tracking-[0.3em]">
-          Davao Durian Systems • v1.0
+          Durian Care • v1.0
         </p>
       </footer>
     </div>

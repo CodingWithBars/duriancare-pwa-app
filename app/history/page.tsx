@@ -78,7 +78,6 @@ export default function HistoryPage() {
 
   return (
     <div className="bg-white min-h-screen pb-32 select-none">
-      {/* 1. SEARCH & HEADER */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-100">
          <div className="px-6 py-4 space-y-4">
           <div className="relative">
@@ -112,7 +111,6 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {/* 2. LIST CONTENT */}
       <div className="p-6">
         <div className="space-y-4">
           {filteredHistory.length === 0 && (
@@ -157,7 +155,6 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {/* 3. BULK DELETE BAR */}
       <AnimatePresence>
         {isSelectionMode && selectedIds.length > 0 && (
           <motion.div 
@@ -175,13 +172,11 @@ export default function HistoryPage() {
         )}
       </AnimatePresence>
 
-      {/* 4. DETAIL MODAL (With Ripeness Factors) */}
       <AnimatePresence>
         {selectedEntry && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md overflow-y-auto">
             <div className="min-h-screen flex flex-col p-6 max-w-lg mx-auto">
               
-              {/* Modal Header */}
               <div className="flex justify-between items-center mb-6">
                 <button onClick={() => setSelectedEntry(null)} className="p-3 bg-white/10 rounded-2xl text-white backdrop-blur-md active:scale-90 transition-all">
                   <X size={20} />
@@ -195,7 +190,6 @@ export default function HistoryPage() {
                 </button>
               </div>
 
-              {/* Image Preview */}
               <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full aspect-square rounded-[40px] overflow-hidden border-2 border-white/20 shadow-2xl mb-6 relative">
                 <img src={selectedEntry.image} className="w-full h-full object-cover" alt="Detail" />
                 <div className="absolute bottom-4 left-4 right-4 bg-black/40 backdrop-blur-md border border-white/20 p-4 rounded-2xl">
@@ -212,10 +206,8 @@ export default function HistoryPage() {
                 </div>
               </motion.div>
 
-              {/* Analysis White Sheet */}
               <div className="bg-white rounded-[36px] p-8 space-y-8 flex-1 shadow-2xl mb-10">
                 
-                {/* Metrics Row */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <Target className="text-emerald-500" size={18} />
@@ -233,7 +225,6 @@ export default function HistoryPage() {
                   </div>
                 </div>
 
-                {/* --- RIPENESS FACTORS BAR (The requested part) --- */}
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
                     <h4 className="text-[11px] font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
@@ -244,7 +235,6 @@ export default function HistoryPage() {
                   </div>
                   
                   <div className="space-y-4">
-                    {/* Spine Flexibility Factor */}
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase">
                         <span className="flex items-center gap-1.5"><Leaf size={10}/> Spine Flexibility</span>
@@ -258,7 +248,6 @@ export default function HistoryPage() {
                       </div>
                     </div>
 
-                    {/* Shell Coloration Factor */}
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase">
                         <span className="flex items-center gap-1.5"><ThermometerSun size={10}/> Shell Coloration</span>

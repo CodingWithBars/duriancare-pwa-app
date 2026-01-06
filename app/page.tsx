@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import Onboarding from "../components/Onboarding"; // Ensure the path is correct
+import Onboarding from "../components/Onboarding";
 
 interface Assessment {
   id: number;
@@ -25,11 +25,9 @@ export default function Home() {
   const [selectedEntry, setSelectedEntry] = useState<Assessment | null>(null);
 
   useEffect(() => {
-    // 1. Check Onboarding Status
     const hasOnboarded = localStorage.getItem("durian_onboarded");
     setShowOnboarding(!hasOnboarded);
 
-    // 2. Load Assessment History
     const loadData = () => {
       const savedData = localStorage.getItem("durian_history");
       if (savedData) {
@@ -48,7 +46,6 @@ export default function Home() {
     return () => window.removeEventListener('focus', loadData);
   }, []);
 
-  // Prevent UI flickering while checking localStorage
   if (showOnboarding === null) return null;
 
   return (
@@ -74,7 +71,6 @@ export default function Home() {
       >
         <div className="p-6 space-y-8">
           
-          {/* Hero Assessment Card */}
           <section className="relative overflow-hidden bg-emerald-600 rounded-[32px] p-8 text-white shadow-xl shadow-emerald-200/50 border border-emerald-500/20">
             <div className="relative z-10 w-full">
               <h2 className="text-3xl font-black mb-2 tracking-tight">Ready to scan?</h2>
@@ -92,7 +88,6 @@ export default function Home() {
             <Leaf className="absolute top-6 right-6 text-emerald-400/20 rotate-12" size={80} />
           </section>
 
-          {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-slate-50 p-5 rounded-[28px] border border-slate-100 shadow-sm">
               <div className="w-12 h-12 bg-blue-100/50 rounded-2xl flex items-center justify-center mb-4 text-blue-600">
@@ -111,7 +106,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Recent History Section */}
           <section className="flex flex-col">
             <div className="flex justify-between items-center mb-5 px-2">
               <h3 className="font-black text-slate-900 text-lg tracking-tight">Recent Scans</h3>
@@ -160,7 +154,6 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Quick Tip */}
           <section className="bg-slate-900 rounded-[32px] p-6 text-white flex items-center gap-5">
             <div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center shrink-0">
               <Info className="text-white" size={28} />
@@ -171,7 +164,6 @@ export default function Home() {
           </section>
         </div>
 
-        {/* DETAIL OVERLAY (MODAL) */}
         <AnimatePresence>
           {selectedEntry && (
             <motion.div 

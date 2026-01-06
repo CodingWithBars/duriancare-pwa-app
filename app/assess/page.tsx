@@ -139,7 +139,6 @@ export default function AssessPage() {
   };
 
   return (
-    /* fixed inset-0 and z-[9999] ensures this stays on top of any layout navbars */
     <div className="fixed inset-0 h-[100dvh] w-full bg-black overflow-hidden flex flex-col select-none z-[9999]">
       {/* Hidden Tools */}
       <canvas ref={canvasRef} className="hidden" />
@@ -159,7 +158,6 @@ export default function AssessPage() {
         }}
       />
 
-      {/* 1. TOP HUD - Close button is the main exit */}
       <div className="absolute top-0 inset-x-0 z-[100] p-6 flex justify-between items-start">
         <button
           onClick={() => router.push("/")}
@@ -201,7 +199,6 @@ export default function AssessPage() {
         </div>
       </div>
 
-      {/* 2. VIEWPORT */}
       <div className="relative flex-1 w-full h-full overflow-hidden">
         {!capturedImage ? (
           <video
@@ -218,7 +215,6 @@ export default function AssessPage() {
           />
         )}
 
-        {/* SCANNER GUIDES */}
         <div className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center">
           <div className="w-72 h-72 relative">
             <div className="absolute top-0 left-0 w-12 h-12 border-t-[6px] border-l-[6px] border-emerald-500 rounded-tl-[32px]" />
@@ -244,7 +240,6 @@ export default function AssessPage() {
           </div>
         </div>
 
-        {/* 3. CONTROLS (Floating above the very bottom) */}
         <div className="absolute bottom-0 inset-x-0 z-40 p-10 pb-16 flex flex-col items-center gap-8 bg-gradient-to-t from-black via-black/20 to-transparent">
           {!capturedImage && (
             <div className="flex items-center gap-6 bg-black/60 backdrop-blur-2xl px-6 py-3 rounded-full border border-white/10 shadow-2xl">
@@ -313,7 +308,6 @@ export default function AssessPage() {
         </div>
       </div>
 
-      {/* 4. RESULT SHEET */}
       <AnimatePresence>
         {capturedImage && !isScanning && scanResult && (
           <motion.div
@@ -325,7 +319,6 @@ export default function AssessPage() {
           >
             <div className="w-14 h-1.5 bg-slate-200 rounded-full mx-auto mb-8" />
 
-            {/* Header Info */}
             <div className="flex justify-between items-center mb-6">
               <div className="bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider">
                 Variety Match: Puyat
@@ -335,7 +328,6 @@ export default function AssessPage() {
               </button>
             </div>
 
-            {/* Main Result */}
             <div className="text-center mb-8">
               <p className="text-slate-400 text-[11px] font-bold uppercase tracking-[0.2em] mb-1">
                 CNN Classification
@@ -363,7 +355,6 @@ export default function AssessPage() {
               </div>
             </div>
 
-            {/* --- INFERENCE FACTORS SECTION --- */}
             <div className="mb-10 space-y-5 bg-slate-50 p-6 rounded-[32px] border border-slate-100">
               <div className="flex items-center justify-between">
                 <h4 className="text-[10px] font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
@@ -373,7 +364,6 @@ export default function AssessPage() {
               </div>
 
               <div className="space-y-4">
-                {/* Factor 1: Spine Flexibility */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase">
                     <span>Spine Flexibility</span>
@@ -395,7 +385,6 @@ export default function AssessPage() {
                   </div>
                 </div>
 
-                {/* Factor 2: Coloration */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase">
                     <span>Shell Coloration</span>
@@ -419,7 +408,6 @@ export default function AssessPage() {
               </div>
             </div>
 
-            {/* Action Button */}
             <button
               onClick={saveToHistory}
               className="w-full bg-slate-900 text-white py-6 rounded-[32px] font-black text-xl active:scale-95 transition-all shadow-2xl shadow-slate-400"

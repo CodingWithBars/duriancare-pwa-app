@@ -65,7 +65,6 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
       </div>
 
       <div className="relative z-10 space-y-8">
-        {/* Progress Dots */}
         <div className="flex justify-center gap-2">
           {slides.map((_, i) => (
             <div 
