@@ -4,20 +4,22 @@ import { useEffect, useState } from "react";
 import { 
   Calendar, Search, Trash2, X, Check, 
   ListChecks, Target, Cpu, ThermometerSun,
-  Activity, Leaf, Wind
+  Activity, Leaf, Wind, RefreshCw
 } from "lucide-react";
+import { syncOfflineScans, getSyncQueue } from "@/lib/sync";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { supabase } from "@/lib/supabase";
 
 interface Assessment {
-  id: number;
+  id: number | string;
   created_at: string;
   result: string;
   confidence: number;
   image_url: string;
   variety: string;
   is_correct?: boolean;
+  is_offline?: boolean;
 }
 
 export default function HistoryPage() {
@@ -25,41 +27,63 @@ export default function HistoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEntry, setSelectedEntry] = useState<Assessment | null>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, setSelectedIds] = useState<(number | string)[]>([]);
 
   const loadData = async () => {
-    const { data, error } = await supabase
+    // 1. Load from Supabase
+    const { data: cloudData, error } = await supabase
       .from('scans')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error("Failed to fetch history from Supabase", error);
-      return;
     }
-    setHistory(data as Assessment[]);
+
+    // 2. Load from Local Sync Queue
+    const queue = getSyncQueue();
+    const queuedItems: Assessment[] = queue.map(q => ({
+      id: q.id,
+      created_at: new Date(parseInt(q.id)).toISOString(),
+      result: q.result,
+      confidence: q.confidence,
+      image_url: q.image_data, // Use base64 directly for preview
+      variety: q.variety,
+      is_offline: true
+    }));
+
+    setHistory([...queuedItems, ...(cloudData || [])] as Assessment[]);
   };
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const toggleSelection = (id: number) => {
+  const toggleSelection = (id: number | string) => {
     setSelectedIds(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
 
-  const deleteSingle = async (id: number) => {
+  const deleteSingle = async (id: number | string) => {
     if (confirm("Permanently delete this assessment from the cloud?")) {
-      const { error } = await supabase
-        .from('scans')
-        .delete()
-        .eq('id', id);
+      // If it's a cloud ID (number)
+      if (typeof id === 'number') {
+        const { error } = await supabase
+          .from('scans')
+          .delete()
+          .eq('id', id);
 
-      if (error) {
-        alert("Failed to delete record.");
-        return;
+        if (error) {
+          alert("Failed to delete record.");
+          return;
+        }
+      } else {
+        // If it's an offline ID (string), we should ideally remove it from the sync queue
+        // For now, we'll just refresh, but in a real app you'd filter the localStorage queue.
+        const queue = getSyncQueue();
+        const filtered = queue.filter(q => q.id !== id);
+        localStorage.setItem("durian_sync_queue", JSON.stringify(filtered));
       }
       
       loadData();
@@ -68,15 +92,23 @@ export default function HistoryPage() {
   };
 
   const deleteSelected = async () => {
-    if (confirm(`Delete ${selectedIds.length} selected scans from the cloud?`)) {
-      const { error } = await supabase
-        .from('scans')
-        .delete()
-        .in('id', selectedIds);
+    if (confirm(`Delete ${selectedIds.length} selected scans?`)) {
+      const cloudIds = selectedIds.filter(id => typeof id === 'number') as number[];
+      const offlineIds = selectedIds.filter(id => typeof id === 'string') as string[];
 
-      if (error) {
-        alert("Failed to delete selected records.");
-        return;
+      if (cloudIds.length > 0) {
+        const { error } = await supabase
+          .from('scans')
+          .delete()
+          .in('id', cloudIds);
+        
+        if (error) alert("Failed to delete some cloud records.");
+      }
+
+      if (offlineIds.length > 0) {
+        const queue = getSyncQueue();
+        const filtered = queue.filter(q => !offlineIds.includes(q.id));
+        localStorage.setItem("durian_sync_queue", JSON.stringify(filtered));
       }
 
       loadData();
@@ -179,15 +211,26 @@ export default function HistoryPage() {
                     {selectedIds.includes(item.id) && <Check size={14} className="text-white" />}
                   </div>
                 )}
-                <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 shrink-0 border border-slate-50">
+                <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 shrink-0 border border-slate-50 relative">
                   <img src={item.image_url} alt="Scan" className="w-full h-full object-cover" />
+                  {item.is_offline && (
+                    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center">
+                      <RefreshCw size={14} className="text-white animate-spin" />
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-black text-slate-900 text-sm truncate">{item.variety}</p>
-                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${getResultColor(item.result)}`}>
-                      {item.result}
-                    </span>
+                    {item.is_offline ? (
+                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-slate-100 text-slate-400 border border-slate-200">
+                        Syncing...
+                      </span>
+                    ) : (
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${getResultColor(item.result)}`}>
+                        {item.result}
+                      </span>
+                    )}
                     {item.is_correct === false && (
                       <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-rose-500 text-white border-rose-500">
                         Mislabeled
@@ -287,11 +330,11 @@ export default function HistoryPage() {
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase">
                         <span className="flex items-center gap-1.5"><Leaf size={10}/> Spine Flexibility</span>
-                        <span>{selectedEntry.result === "Ripe" ? "88%" : "42%"}</span>
+                        <span>{selectedEntry.result === "Not Durian" ? "0%" : (selectedEntry.result === "Ripe" ? "88%" : "42%")}</span>
                       </div>
                       <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                         <motion.div 
-                          initial={{ width: 0 }} animate={{ width: selectedEntry.result === "Ripe" ? "88%" : "42%" }}
+                          initial={{ width: 0 }} animate={{ width: selectedEntry.result === "Not Durian" ? "0%" : (selectedEntry.result === "Ripe" ? "88%" : "42%") }}
                           className={`h-full rounded-full ${selectedEntry.result === "Ripe" ? "bg-emerald-500" : "bg-amber-400"}`}
                         />
                       </div>
@@ -300,11 +343,11 @@ export default function HistoryPage() {
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase">
                         <span className="flex items-center gap-1.5"><ThermometerSun size={10}/> Shell Coloration</span>
-                        <span>{selectedEntry.result === "Ripe" ? "92%" : "65%"}</span>
+                        <span>{selectedEntry.result === "Not Durian" ? "0%" : (selectedEntry.result === "Ripe" ? "92%" : "65%")}</span>
                       </div>
                       <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                         <motion.div 
-                          initial={{ width: 0 }} animate={{ width: selectedEntry.result === "Ripe" ? "92%" : "65%" }}
+                          initial={{ width: 0 }} animate={{ width: selectedEntry.result === "Not Durian" ? "0%" : (selectedEntry.result === "Ripe" ? "92%" : "65%") }}
                           className={`h-full rounded-full ${selectedEntry.result === "Ripe" ? "bg-emerald-500" : "bg-amber-400"}`}
                         />
                       </div>

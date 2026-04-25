@@ -1,25 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { 
-  Camera, History, Leaf, ChevronRight, Image as ImageIcon, 
-  Info, X, Target, Cpu, ThermometerSun, Calendar 
-} from "lucide-react";
+import { Camera, History, Leaf, ChevronRight, Image as ImageIcon, Info, X, Target, Cpu, ThermometerSun, Calendar, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import Onboarding from "../components/Onboarding";
 import PWAInstall from "@/components/PWAInstall";
+import { getSyncQueue } from "@/lib/sync";
 
 import { supabase } from "@/lib/supabase";
 
 interface Assessment {
-  id: number;
+  id: number | string;
   created_at: string;
   result: string;
   confidence: number;
   image_url: string;
   variety: string;
-  is_correct?: boolean;
+  is_offline?: boolean;
 }
 
 export default function Home() {
@@ -32,17 +30,29 @@ export default function Home() {
     setShowOnboarding(!hasOnboarded);
 
     const loadData = async () => {
-      const { data, error } = await supabase
+      // 1. Cloud Data
+      const { data: cloudData, error } = await supabase
         .from('scans')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error("Failed to fetch history from Supabase", error);
-        return;
       }
 
-      setHistory(data as Assessment[]);
+      // 2. Offline Data
+      const queue = getSyncQueue();
+      const queuedItems: Assessment[] = queue.map(q => ({
+        id: q.id,
+        created_at: new Date(parseInt(q.id)).toISOString(),
+        result: q.result,
+        confidence: q.confidence,
+        image_url: q.image_data,
+        variety: q.variety,
+        is_offline: true
+      }));
+
+      setHistory([...queuedItems, ...(cloudData || [])] as Assessment[]);
     };
 
     loadData();
@@ -159,12 +169,17 @@ export default function Home() {
                     onClick={() => setSelectedEntry(item)}
                     className="group flex items-center gap-4 bg-slate-50/50 p-4 rounded-[30px] border border-slate-100/80 active:scale-[0.97] transition-all cursor-pointer hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 hover:border-emerald-200"
                   >
-                    <div className="w-16 h-16 bg-white rounded-[20px] overflow-hidden flex-shrink-0 border border-slate-100 shadow-sm group-hover:border-emerald-100 transition-colors">
+                    <div className="w-16 h-16 bg-white rounded-[20px] overflow-hidden flex-shrink-0 border border-slate-100 shadow-sm group-hover:border-emerald-100 transition-colors relative">
                       <img src={item.image_url} className="w-full h-full object-cover" alt="Scan" />
+                      {item.is_offline && (
+                        <div className="absolute inset-0 bg-slate-900/20 flex items-center justify-center">
+                          <RefreshCw className="text-white animate-spin" size={12} />
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-black text-slate-900 text-sm truncate leading-tight mb-0.5 group-hover:text-emerald-700 transition-colors">
-                        Batch #{item.id.toString().slice(-4)}
+                        {item.is_offline ? "Syncing..." : `Batch #${item.id.toString().slice(-4)}`}
                       </p>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold text-slate-400">
@@ -246,12 +261,12 @@ export default function Home() {
                       <div className="space-y-1.5">
                         <div className="flex justify-between text-[11px] font-black text-slate-700 uppercase">
                           <span>CNN Analysis (texture)</span>
-                          <span>{Math.floor(selectedEntry.confidence * 0.92)}%</span>
+                          <span>{selectedEntry.result === "Not Durian" ? "0%" : `${Math.floor(selectedEntry.confidence * 0.92)}%`}</span>
                         </div>
                         <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
                           <motion.div 
                             initial={{ width: 0 }} 
-                            animate={{ width: `${Math.floor(selectedEntry.confidence * 0.92)}%` }} 
+                            animate={{ width: selectedEntry.result === "Not Durian" ? "0%" : `${Math.floor(selectedEntry.confidence * 0.92)}%` }} 
                             transition={{ delay: 0.3, duration: 1 }}
                             className="h-full bg-emerald-500" 
                           />
@@ -261,12 +276,12 @@ export default function Home() {
                       <div className="space-y-1.5">
                         <div className="flex justify-between text-[11px] font-black text-slate-700 uppercase">
                           <span>ViT Analysis (spatial)</span>
-                          <span>{Math.floor(selectedEntry.confidence * 0.88)}%</span>
+                          <span>{selectedEntry.result === "Not Durian" ? "0%" : `${Math.floor(selectedEntry.confidence * 0.88)}%`}</span>
                         </div>
                         <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
                           <motion.div 
                             initial={{ width: 0 }} 
-                            animate={{ width: `${Math.floor(selectedEntry.confidence * 0.88)}%` }} 
+                            animate={{ width: selectedEntry.result === "Not Durian" ? "0%" : `${Math.floor(selectedEntry.confidence * 0.88)}%` }} 
                             transition={{ delay: 0.5, duration: 1 }}
                             className="h-full bg-blue-500" 
                           />
