@@ -1,8 +1,50 @@
 "use client";
 
-import { useState } from "react";
-import { Cpu, Settings, Trash2, Smartphone, ShieldCheck, Info } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Cpu, Settings, Trash2, Smartphone, ShieldCheck, Info, Leaf } from "lucide-react";
 import PWAInstall from "@/components/PWAInstall";
+import { RESTRICTION_DATE, SUPPORT_CONTACT, SYSTEM_ID } from "@/lib/constants";
+
+function CountdownDisplay({ targetDate }: { targetDate: string }) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = new Date(targetDate).getTime() - now;
+
+      if (distance < 0) {
+        clearInterval(timer);
+        return;
+      }
+
+      setTimeLeft({
+        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((distance % (1000 * 60)) / 1000),
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [targetDate]);
+
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {[
+        { label: "Days", value: timeLeft.days },
+        { label: "Hrs", value: timeLeft.hours },
+        { label: "Min", value: timeLeft.minutes },
+        { label: "Sec", value: timeLeft.seconds },
+      ].map((item) => (
+        <div key={item.label} className="flex flex-col items-center">
+          <span className="text-lg font-black tabular-nums">{item.value.toString().padStart(2, '0')}</span>
+          <span className="text-[7px] font-black uppercase text-slate-500">{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function InfoPage() {
   const [hapticFeedback, setHapticFeedback] = useState(true);
@@ -103,15 +145,75 @@ export default function InfoPage() {
         </div>
       </section>
 
-      <section className="bg-slate-900 rounded-[32px] p-6 text-white shadow-xl shadow-slate-200">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-emerald-500 rounded-lg">
-            <ShieldCheck size={18} className="text-white" />
+      <section className="space-y-4">
+        <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
+          <ShieldCheck size={14} />
+          System Status & License
+        </h3>
+        
+        <div className="bg-slate-900 rounded-[32px] p-6 text-white shadow-xl shadow-slate-200">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500 rounded-lg">
+                  <ShieldCheck size={18} className="text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm">System Active</p>
+                  <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase">ID: {SYSTEM_ID}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black text-emerald-500 uppercase">Pro Licensed</p>
+              </div>
+            </div>
+
+            <div className="h-px bg-white/10 w-full" />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Expiry Date</p>
+                <p className="text-xs font-bold text-amber-400">
+                  {new Date(RESTRICTION_DATE).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  })}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Time Limit</p>
+                <p className="text-xs font-bold text-slate-200">
+                  {new Date(RESTRICTION_DATE).toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit'
+                  })}
+                </p>
+              </div>
+            </div>
+
+            {/* LIVE COUNTDOWN */}
+            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 text-center">Remaining Access Time</p>
+              <CountdownDisplay targetDate={RESTRICTION_DATE} />
+            </div>
+
+            <div className="pt-2">
+              <p className="text-slate-400 text-[10px] leading-relaxed italic">
+                System access is strictly bound to your license terms. For renewals or balance inquiries, please contact: <span className="text-white font-bold">{SUPPORT_CONTACT}</span>
+              </p>
+            </div>
           </div>
-          <p className="font-bold text-sm">On-Device Processing</p>
         </div>
-        <p className="text-slate-400 text-xs leading-relaxed ml-1">
-          To protect farmer data and ensure speed in remote Davao orchards, all AI inference happens locally. No internet required for assessment.
+      </section>
+
+      <section className="bg-emerald-50 border border-emerald-100 rounded-[32px] p-6 text-emerald-800">
+        <div className="flex items-center gap-3 mb-2">
+          <Leaf size={18} className="text-emerald-600" />
+          <p className="font-bold text-sm">Offline First Architecture</p>
+        </div>
+        <p className="text-emerald-700/70 text-xs leading-relaxed">
+          To protect farmer data and ensure speed in remote Davao orchards, all AI inference happens locally. Your privacy is our priority.
         </p>
       </section>
 

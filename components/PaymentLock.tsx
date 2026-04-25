@@ -4,9 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, AlertCircle, Phone, CreditCard } from "lucide-react";
 
-// --- CHANGE DEADLINE HERE ---
-const RESTRICTION_DATE = "2026-04-25T19:20:00"; // Format: YYYY-MM-DDTHH:MM:SS
-// ----------------------------
+import { RESTRICTION_DATE, SUPPORT_CONTACT, SYSTEM_ID } from "@/lib/constants";
 
 export default function PaymentLock({ children }: { children: React.ReactNode }) {
   const [isLocked, setIsLocked] = useState(false);
@@ -48,7 +46,7 @@ export default function PaymentLock({ children }: { children: React.ReactNode })
               
               <h2 className="text-2xl font-black text-slate-900 mb-2 italic">Access Restricted</h2>
               <p className="text-slate-500 text-sm font-bold leading-relaxed mb-8">
-                System access has been paused due to an outstanding balance. Please settle the remaining amount to continue using DurianCare PRO.
+                System access has been paused due to an outstanding balance. Please settle the remaining amount to continue using DurianCare.
               </p>
 
               <div className="space-y-3 mb-8">
@@ -63,7 +61,7 @@ export default function PaymentLock({ children }: { children: React.ReactNode })
                   <Phone className="text-emerald-500" size={18} />
                   <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Support Contact</p>
-                    <p className="text-xs font-bold text-slate-700">+63 9xx xxx xxxx</p>
+                    <p className="text-xs font-bold text-slate-700">{SUPPORT_CONTACT}</p>
                   </div>
                 </div>
               </div>
@@ -77,7 +75,7 @@ export default function PaymentLock({ children }: { children: React.ReactNode })
               </button>
               
               <p className="mt-6 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
-                System ID: DC-PRO-7742
+                System ID: {SYSTEM_ID}
               </p>
             </motion.div>
           </motion.div>
