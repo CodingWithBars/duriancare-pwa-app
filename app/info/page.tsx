@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Cpu, Settings, Trash2, Smartphone, ShieldCheck, Info } from "lucide-react";
+import PWAInstall from "@/components/PWAInstall";
 
 export default function InfoPage() {
   const [hapticFeedback, setHapticFeedback] = useState(true);
@@ -33,6 +34,8 @@ export default function InfoPage() {
           App Preferences
         </h3>
         
+        <PWAInstall variant="button" />
+
         <div className="bg-slate-50 rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between p-5 border-b border-white">
             <div className="flex items-center gap-4">

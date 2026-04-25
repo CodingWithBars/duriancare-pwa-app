@@ -6,22 +6,28 @@ import { Camera, ShieldCheck, Zap, ChevronRight, Leaf } from "lucide-react";
 
 const slides = [
   {
-    title: "Hybrid Intelligence",
-    description: "Powered by CNN and Vision Transformers to analyze Puyat Durian texture and structure with 98% accuracy.",
+    title: "Hybrid AI Engine",
+    description: "Powered by Puyat-calibrated CNN and Vision Transformers to analyze durian structure with 98% accuracy.",
     icon: <Zap className="text-amber-400" size={40} />,
     color: "bg-amber-500",
   },
   {
-    title: "Thorn Analysis",
-    description: "For best results, ensure the durian is well-lit. Our AI focuses on thorn density and color patterns.",
-    icon: <Camera className="text-emerald-400" size={40} />,
+    title: "Offline Intelligence",
+    description: "Scan durians anywhere, even in remote orchards with no signal. Your results are processed entirely on-device.",
+    icon: <Leaf className="text-emerald-400" size={40} />,
     color: "bg-emerald-500",
   },
   {
-    title: "Davao Standards",
-    description: "Specifically calibrated for Puyat variety standards in the Davao Region for local farmers and traders.",
-    icon: <ShieldCheck className="text-blue-400" size={40} />,
+    title: "Secure Cloud Sync",
+    description: "All your records are automatically synced to our secure cloud database the moment you get back online.",
+    icon: <Zap className="text-blue-400" size={40} />,
     color: "bg-blue-500",
+  },
+  {
+    title: "Training Feedback",
+    description: "Help the AI improve by labeling inconsistent results. Your feedback directly trains the next generation of Puyat models.",
+    icon: <ShieldCheck className="text-purple-400" size={40} />,
+    color: "bg-purple-500",
   },
 ];
 

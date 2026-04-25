@@ -8,6 +8,7 @@ import {
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import Onboarding from "../components/Onboarding";
+import PWAInstall from "@/components/PWAInstall";
 
 import { supabase } from "@/lib/supabase";
 
@@ -304,6 +305,8 @@ export default function Home() {
             </motion.div>
           )}
         </AnimatePresence>
+        
+        <PWAInstall variant="floating" />
       </motion.div>
     </>
   );
