@@ -11,7 +11,7 @@ export default function BottomNav() {
   const isAssessPage = pathname === "/assess";
 
   return (
-    <div className="fixed bottom-0 left-0 z-50 w-full h-20 bg-white border-t border-gray-100 pb-safe max-w-md mx-auto right-0">
+    <div className="relative w-full h-20 bg-white border-t border-gray-100 pb-safe shrink-0 z-50">
       
       <div className={`grid h-full mx-auto relative ${isAssessPage ? 'grid-cols-2' : 'grid-cols-3'}`}>
         

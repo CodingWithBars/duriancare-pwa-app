@@ -41,36 +41,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="h-full overflow-hidden">
       <head>
-        {/* Forces the iPhone icon if the manifest is slow to load */}
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-100`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-100 h-full overflow-hidden`}>
         
-        {/* TOP NAV: With padding-top for the iOS Notch */}
-        <header className="fixed top-0 left-0 right-0 z-50 pt-[env(safe-area-inset-top)] bg-white/60 backdrop-blur-xl border-b border-white/20">
-          <div className="max-w-md mx-auto h-16">
-            <TopNav />
-          </div>
-        </header>
-        
-        {/* MAIN AREA: min-h-dvh handles the mobile browser toolbars dynamically */}
-        <main className="relative flex flex-col min-h-dvh max-w-md mx-auto bg-white shadow-2xl overflow-x-hidden">
-          {/* pt-20 (TopNav height + status bar)
-              pb-32 (BottomNav height + safe area)
-          */}
-          <div className="flex-1 mt-16 pt-[env(safe-area-inset-top)] mb-28 pb-[env(safe-area-inset-bottom)]">
+        <div className="relative h-full max-w-md mx-auto bg-white shadow-2xl flex flex-col">
+          {/* Top Navigation */}
+          <TopNav />
+          
+          {/* Scrollable Content Area */}
+          <main className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth">
             {children}
-          </div>
-        </main>
+          </main>
 
-        {/* BOTTOM NAV: With padding-bottom for the Home Indicator bar */}
-        <footer className="fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)] bg-white/60 backdrop-blur-xl border-t border-white/20">
-          <div className="max-w-md mx-auto h-20">
-            <BottomNav />
-          </div>
-        </footer>
+          {/* Bottom Navigation */}
+          <BottomNav />
+        </div>
 
       </body>
     </html>

@@ -71,21 +71,48 @@ export default function Home() {
       >
         <div className="p-6 space-y-8">
           
-          <section className="relative overflow-hidden bg-emerald-600 rounded-[32px] p-8 text-white shadow-xl shadow-emerald-200/50 border border-emerald-500/20">
+          <section className="relative overflow-hidden bg-slate-900 rounded-[40px] p-8 text-white shadow-2xl shadow-emerald-900/20 border border-white/5">
+            {/* Background Accent */}
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/20 rounded-full blur-[80px]" />
+            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-[80px]" />
+            
             <div className="relative z-10 w-full">
-              <h2 className="text-3xl font-black mb-2 tracking-tight">Ready to scan?</h2>
-              <p className="text-emerald-50 text-sm mb-8 max-w-[220px] leading-relaxed">
-                Hybrid CNN-ViT ripeness assessment for <span className="font-bold text-white">Puyat Durian</span>.
+              <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full mb-6">
+                <Target size={12} className="text-emerald-400" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Puyat AI v1.0</span>
+              </div>
+
+              <h2 className="text-4xl font-black mb-3 tracking-tighter leading-none italic">
+                SMART <span className="text-emerald-400">DURIAN</span> EXPERT
+              </h2>
+              
+              <p className="text-slate-400 text-sm mb-10 max-w-[240px] leading-relaxed font-medium">
+                Professional-grade ripeness detection powered by <span className="text-white font-bold underline decoration-emerald-500/50">Hybrid CNN-ViT</span> architecture.
               </p>
-              <Link 
-                href="/assess"
-                className="flex w-full bg-white text-emerald-700 px-7 py-5 rounded-3xl font-black items-center justify-center gap-3 active:scale-[0.98] transition-all shadow-xl"
-              >
-                <Camera size={22} />
-                Start Assessment
-              </Link>
+
+              <div className="flex flex-col gap-3">
+                <Link 
+                  href="/assess"
+                  className="flex w-full bg-emerald-500 text-white px-7 py-5 rounded-[24px] font-black items-center justify-center gap-3 active:scale-[0.95] transition-all shadow-[0_20px_40px_rgba(16,185,129,0.3)] hover:bg-emerald-400"
+                >
+                  <Camera size={22} strokeWidth={3} />
+                  Identify Ripeness
+                </Link>
+                
+                <div className="flex items-center justify-center gap-4 py-2">
+                  <div className="flex items-center gap-1.5 opacity-60">
+                    <Cpu size={12} />
+                    <span className="text-[9px] font-bold uppercase tracking-tighter">On-Device AI</span>
+                  </div>
+                  <div className="w-1 h-1 bg-slate-700 rounded-full" />
+                  <div className="flex items-center gap-1.5 opacity-60">
+                    <Target size={12} />
+                    <span className="text-[9px] font-bold uppercase tracking-tighter">98% Precision</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <Leaf className="absolute top-6 right-6 text-emerald-400/20 rotate-12" size={80} />
+            <Leaf className="absolute -top-4 -right-4 text-white/5 -rotate-12" size={140} />
           </section>
 
           <div className="grid grid-cols-2 gap-4">
@@ -126,27 +153,29 @@ export default function Home() {
                   <div 
                     key={item.id} 
                     onClick={() => setSelectedEntry(item)}
-                    className="group flex items-center gap-4 bg-white p-4 rounded-[24px] border border-slate-100 shadow-sm active:scale-[0.98] transition-all cursor-pointer hover:border-emerald-100"
+                    className="group flex items-center gap-4 bg-slate-50/50 p-4 rounded-[30px] border border-slate-100/80 active:scale-[0.97] transition-all cursor-pointer hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 hover:border-emerald-200"
                   >
-                    <div className="w-14 h-14 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-50">
+                    <div className="w-16 h-16 bg-white rounded-[20px] overflow-hidden flex-shrink-0 border border-slate-100 shadow-sm group-hover:border-emerald-100 transition-colors">
                       <img src={item.image} className="w-full h-full object-cover" alt="Scan" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-slate-900 text-sm truncate">Batch #{item.id.toString().slice(-4)}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <p className="font-black text-slate-900 text-sm truncate leading-tight mb-0.5 group-hover:text-emerald-700 transition-colors">
+                        Batch #{item.id.toString().slice(-4)}
+                      </p>
+                      <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold text-slate-400">{item.time}</span>
-                        <span className="text-[10px] font-bold text-emerald-600">{item.confidence}% Sure</span>
+                        <div className="w-1 h-1 bg-slate-200 rounded-full" />
+                        <span className="text-[10px] font-black text-emerald-600 tracking-tight">{item.confidence}% MATCH</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md border ${
-                        item.result === 'Ripe' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 
-                        item.result === 'Overripe' ? 'bg-rose-50 text-rose-700 border-rose-100' :
-                        'bg-amber-50 text-amber-700 border-amber-100'
+                      <div className={`px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider ${
+                        item.result === 'Ripe' ? 'bg-emerald-500 text-white border-emerald-600 shadow-lg shadow-emerald-500/20' : 
+                        item.result === 'Overripe' ? 'bg-rose-500 text-white border-rose-600 shadow-lg shadow-rose-500/20' :
+                        'bg-amber-500 text-white border-amber-600 shadow-lg shadow-amber-500/20'
                       }`}>
                         {item.result}
-                      </span>
-                      <ChevronRight size={16} className="text-slate-300" />
+                      </div>
                     </div>
                   </div>
                 ))
