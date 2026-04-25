@@ -40,6 +40,8 @@ export default function AssessPage() {
     "environment"
   );
   const [model, setModel] = useState<tflite.TFLiteModel | null>(null);
+  const [isModelLoading, setIsModelLoading] = useState(true);
+  const [modelError, setModelError] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -66,13 +68,18 @@ export default function AssessPage() {
 
   useEffect(() => {
     const loadModel = async () => {
+      setIsModelLoading(true);
+      setModelError(null);
       try {
         tflite.setWasmPath('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/wasm/');
         const loadedModel = await tflite.loadTFLiteModel('/fusion_model_float32.tflite');
         setModel(loadedModel);
+        setIsModelLoading(false);
         console.log("Model loaded successfully");
       } catch (err) {
         console.error("Error loading TFLite model:", err);
+        setModelError("Failed to initialize AI engine");
+        setIsModelLoading(false);
       }
     };
     loadModel();
@@ -236,10 +243,12 @@ export default function AssessPage() {
         </button>
 
         <div className="flex flex-col items-end gap-3">
-          <div className="flex items-center gap-2 bg-emerald-500 px-4 py-2 rounded-full shadow-xl">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-xl transition-colors ${
+            isModelLoading ? 'bg-amber-500' : modelError ? 'bg-red-500' : 'bg-emerald-500'
+          }`}>
+            <div className={`w-2 h-2 bg-white rounded-full ${isModelLoading ? 'animate-bounce' : 'animate-pulse'}`} />
             <span className="text-[10px] font-black text-white uppercase tracking-widest">
-              CNN-ViT LIVE
+              {isModelLoading ? 'Loading AI Model...' : modelError ? 'AI ERROR' : 'AI Ready'}
             </span>
           </div>
 
@@ -354,10 +363,11 @@ export default function AssessPage() {
 
                 <button
                   onClick={capturePhoto}
-                  className="relative w-24 h-24 flex items-center justify-center group"
+                  disabled={isModelLoading || !!modelError}
+                  className={`relative w-24 h-24 flex items-center justify-center group ${isModelLoading || !!modelError ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="absolute inset-0 border-[6px] border-white/40 rounded-full scale-110 group-active:scale-100 transition-all" />
-                  <div className="w-18 h-18 bg-white rounded-full shadow-[0_0_40px_rgba(255,255,255,0.4)]" />
+                  <div className={`w-18 h-18 rounded-full shadow-[0_0_40px_rgba(255,255,255,0.4)] ${isModelLoading ? 'bg-amber-400 animate-pulse' : modelError ? 'bg-red-500' : 'bg-white'}`} />
                 </button>
 
                 <div className="w-14 h-14" />
