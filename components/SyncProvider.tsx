@@ -16,7 +16,12 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
 
     const handleOnline = () => {
       setIsOnline(true);
-      syncOfflineScans(setSyncStatus);
+      syncOfflineScans((msg) => {
+        setSyncStatus(msg);
+        if (msg === "All scans synced successfully!") {
+          setTimeout(() => setSyncStatus(null), 3000);
+        }
+      });
     };
 
     const handleOffline = () => {
@@ -28,7 +33,12 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
 
     // Initial check
     if (navigator.onLine) {
-      syncOfflineScans(setSyncStatus);
+      syncOfflineScans((msg) => {
+        setSyncStatus(msg);
+        if (msg === "All scans synced successfully!") {
+          setTimeout(() => setSyncStatus(null), 3000);
+        }
+      });
     }
 
     return () => {
