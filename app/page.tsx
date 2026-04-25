@@ -9,13 +9,14 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import Onboarding from "../components/Onboarding";
 
+import { supabase } from "@/lib/supabase";
+
 interface Assessment {
   id: number;
-  date: string;
-  time: string;
+  created_at: string;
   result: string;
   confidence: number;
-  image: string;
+  image_url: string;
   variety: string;
 }
 
@@ -28,17 +29,18 @@ export default function Home() {
     const hasOnboarded = localStorage.getItem("durian_onboarded");
     setShowOnboarding(!hasOnboarded);
 
-    const loadData = () => {
-      const savedData = localStorage.getItem("durian_history");
-      if (savedData) {
-        try {
-          const parsedData: Assessment[] = JSON.parse(savedData);
-          const sortedData = parsedData.sort((a, b) => b.id - a.id);
-          setHistory(sortedData);
-        } catch (e) {
-          console.error("Failed to parse history", e);
-        }
+    const loadData = async () => {
+      const { data, error } = await supabase
+        .from('scans')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Failed to fetch history from Supabase", error);
+        return;
       }
+
+      setHistory(data as Assessment[]);
     };
 
     loadData();
@@ -156,14 +158,16 @@ export default function Home() {
                     className="group flex items-center gap-4 bg-slate-50/50 p-4 rounded-[30px] border border-slate-100/80 active:scale-[0.97] transition-all cursor-pointer hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 hover:border-emerald-200"
                   >
                     <div className="w-16 h-16 bg-white rounded-[20px] overflow-hidden flex-shrink-0 border border-slate-100 shadow-sm group-hover:border-emerald-100 transition-colors">
-                      <img src={item.image} className="w-full h-full object-cover" alt="Scan" />
+                      <img src={item.image_url} className="w-full h-full object-cover" alt="Scan" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-black text-slate-900 text-sm truncate leading-tight mb-0.5 group-hover:text-emerald-700 transition-colors">
                         Batch #{item.id.toString().slice(-4)}
                       </p>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-slate-400">{item.time}</span>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                         <div className="w-1 h-1 bg-slate-200 rounded-full" />
                         <span className="text-[10px] font-black text-emerald-600 tracking-tight">{item.confidence}% MATCH</span>
                       </div>
@@ -208,7 +212,7 @@ export default function Home() {
                 </div>
 
                 <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full aspect-square rounded-[40px] overflow-hidden border-2 border-white/20 shadow-2xl mb-8">
-                  <img src={selectedEntry.image} className="w-full h-full object-cover" alt="Detail" />
+                  <img src={selectedEntry.image_url} className="w-full h-full object-cover" alt="Detail" />
                 </motion.div>
 
                 <div className="grid grid-cols-2 gap-4 mb-8">
@@ -276,7 +280,7 @@ export default function Home() {
                       <Calendar className="text-slate-300" size={18} />
                       <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase">Scanned On</p>
-                        <p className="text-xs font-bold text-slate-700">{selectedEntry.date}</p>
+                        <p className="text-xs font-bold text-slate-700">{new Date(selectedEntry.created_at).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">

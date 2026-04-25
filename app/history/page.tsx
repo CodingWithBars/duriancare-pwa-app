@@ -8,13 +8,14 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { supabase } from "@/lib/supabase";
+
 interface Assessment {
   id: number;
-  date: string;
-  time?: string;
+  created_at: string;
   result: string;
   confidence: number;
-  image: string;
+  image_url: string;
   variety: string;
 }
 
@@ -25,9 +26,21 @@ export default function HistoryPage() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
+  const loadData = async () => {
+    const { data, error } = await supabase
+      .from('scans')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Failed to fetch history from Supabase", error);
+      return;
+    }
+    setHistory(data as Assessment[]);
+  };
+
   useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("durian_history") || "[]");
-    setHistory(data.sort((a: any, b: any) => b.id - a.id));
+    loadData();
   }, []);
 
   const toggleSelection = (id: number) => {
@@ -36,26 +49,39 @@ export default function HistoryPage() {
     );
   };
 
-  const deleteSingle = (id: number) => {
-    if (confirm("Permanently delete this assessment?")) {
-      const updated = history.filter(item => item.id !== id);
-      saveAndRefresh(updated);
+  const deleteSingle = async (id: number) => {
+    if (confirm("Permanently delete this assessment from the cloud?")) {
+      const { error } = await supabase
+        .from('scans')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        alert("Failed to delete record.");
+        return;
+      }
+      
+      loadData();
       setSelectedEntry(null);
     }
   };
 
-  const deleteSelected = () => {
-    if (confirm(`Delete ${selectedIds.length} selected scans?`)) {
-      const updated = history.filter(item => !selectedIds.includes(item.id));
-      saveAndRefresh(updated);
+  const deleteSelected = async () => {
+    if (confirm(`Delete ${selectedIds.length} selected scans from the cloud?`)) {
+      const { error } = await supabase
+        .from('scans')
+        .delete()
+        .in('id', selectedIds);
+
+      if (error) {
+        alert("Failed to delete selected records.");
+        return;
+      }
+
+      loadData();
       setSelectedIds([]);
       setIsSelectionMode(false);
     }
-  };
-
-  const saveAndRefresh = (updatedData: Assessment[]) => {
-    setHistory(updatedData);
-    localStorage.setItem("durian_history", JSON.stringify(updatedData));
   };
 
   const getResultColor = (result: string) => {
@@ -69,9 +95,10 @@ export default function HistoryPage() {
 
   const filteredHistory = history.filter((item) => {
     const searchLower = searchTerm.toLowerCase();
+    const dateStr = new Date(item.created_at).toLocaleDateString();
     return (
       item.result.toLowerCase().includes(searchLower) ||
-      item.date.toLowerCase().includes(searchLower) ||
+      dateStr.toLowerCase().includes(searchLower) ||
       item.variety.toLowerCase().includes(searchLower)
     );
   });
@@ -136,7 +163,7 @@ export default function HistoryPage() {
                   </div>
                 )}
                 <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 shrink-0 border border-slate-50">
-                  <img src={item.image} alt="Scan" className="w-full h-full object-cover" />
+                  <img src={item.image_url} alt="Scan" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
@@ -146,7 +173,7 @@ export default function HistoryPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-bold">
-                    <Calendar size={12} /> {item.date} {item.time ? `• ${item.time}` : ''}
+                    <Calendar size={12} /> {new Date(item.created_at).toLocaleDateString()} • {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
               </div>
@@ -183,7 +210,7 @@ export default function HistoryPage() {
                 </button>
                 <div className="text-white text-center">
                   <p className="text-[10px] font-black uppercase tracking-widest text-white/50">Analysis Detail</p>
-                  <p className="text-xs font-bold">{selectedEntry.date}</p>
+                  <p className="text-xs font-bold">{new Date(selectedEntry.created_at).toLocaleDateString()}</p>
                 </div>
                 <button onClick={() => deleteSingle(selectedEntry.id)} className="p-3 bg-rose-500/20 text-rose-400 rounded-2xl border border-rose-500/30 active:scale-90 transition-all">
                   <Trash2 size={20} />
@@ -191,7 +218,7 @@ export default function HistoryPage() {
               </div>
 
               <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full aspect-square rounded-[40px] overflow-hidden border-2 border-white/20 shadow-2xl mb-6 relative">
-                <img src={selectedEntry.image} className="w-full h-full object-cover" alt="Detail" />
+                <img src={selectedEntry.image_url} className="w-full h-full object-cover" alt="Detail" />
                 <div className="absolute bottom-4 left-4 right-4 bg-black/40 backdrop-blur-md border border-white/20 p-4 rounded-2xl">
                    <div className="flex justify-between items-end">
                       <div>

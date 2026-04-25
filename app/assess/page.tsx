@@ -20,6 +20,7 @@ import * as tf from "@tensorflow/tfjs-core";
 import "@tensorflow/tfjs-backend-cpu";
 import "@tensorflow/tfjs-backend-webgl";
 import * as tflite from "@tensorflow/tfjs-tflite";
+import { supabase } from "@/lib/supabase";
 
 export default function AssessPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -150,16 +151,29 @@ export default function AssessPage() {
         resized = tf.image.resizeBilinear(tensor, [height, width]);
       }
       
-      // Attempting to match float16 tensor expectation or standard float32
-      let floatTensor = tf.cast(resized, 'float32');
-      floatTensor = tf.div(floatTensor, 255.0);
+      // Preprocessing: Many Keras/OpenCV models expect BGR instead of RGB
+      const [r, g, b] = tf.split(resized, 3, 2);
+      const bgr = tf.concat([b, g, r], 2);
+      
+      // Try both normalizations internally if needed, but we'll stick to [-1, 1] first with BGR
+      const floatTensorBase = tf.cast(bgr, 'float32');
+      let floatTensor = tf.sub(tf.div(floatTensorBase, tf.scalar(127.5)), tf.scalar(1.0));
 
       if (inputShape && inputShape.length === 4 && floatTensor.shape.length === 3) {
         floatTensor = tf.expandDims(floatTensor, 0);
       }
 
       const output = model.predict(floatTensor) as tf.Tensor;
-      const predictions = await output.data();
+      const rawPredictions = await output.data();
+      
+      // Convert Logits to Probabilities using Softmax
+      const predictions = tf.softmax(tf.tensor1d(rawPredictions)).dataSync();
+      
+      // Cleanup intermediate BGR tensors
+      r.dispose(); g.dispose(); b.dispose(); bgr.dispose();
+      
+      console.log("Raw Predictions (Logits):", rawPredictions);
+      console.log("Probabilities (Softmax):", predictions);
 
       // Match the exact class mapping from the model
       const labels = ["Not Durian", "Ripe", "Semi Ripe", "Unripe"]; 
@@ -169,6 +183,8 @@ export default function AssessPage() {
         if (predictions[i] > predictions[maxIdx]) maxIdx = i;
       }
       
+      console.log(`Detected: ${labels[maxIdx]} (Index: ${maxIdx}) with probability: ${predictions[maxIdx]}`);
+
       setScanResult({
         status: labels[maxIdx] || "Unknown",
         score: parseFloat((predictions[maxIdx] * 100).toFixed(1)),
@@ -176,6 +192,7 @@ export default function AssessPage() {
 
       tensor.dispose();
       if (resized !== tensor) resized.dispose();
+      floatTensorBase.dispose();
       floatTensor.dispose();
       output.dispose();
 
@@ -196,22 +213,50 @@ export default function AssessPage() {
     }
   };
 
-  const saveToHistory = () => {
+  const saveToHistory = async () => {
     if (!capturedImage || !scanResult) return;
-    const newEntry = {
-      id: Date.now(),
-      date: new Date().toLocaleDateString(),
-      result: scanResult.status,
-      confidence: scanResult.score,
-      image: capturedImage,
-      variety: "Puyat",
-    };
-    const history = JSON.parse(localStorage.getItem("durian_history") || "[]");
-    localStorage.setItem(
-      "durian_history",
-      JSON.stringify([newEntry, ...history])
-    );
-    router.push("/history");
+    
+    setIsScanning(true); // Re-use scanning state for loading indicator
+    
+    try {
+      // 1. Convert base64 to Blob
+      const response = await fetch(capturedImage);
+      const blob = await response.blob();
+      
+      // 2. Upload to Supabase Storage
+      const fileName = `scan_${Date.now()}.jpg`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('scans')
+        .upload(fileName, blob, {
+          contentType: 'image/jpeg'
+        });
+
+      if (uploadError) throw uploadError;
+
+      // 3. Get Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('scans')
+        .getPublicUrl(fileName);
+
+      // 4. Save to Database
+      const { error: dbError } = await supabase
+        .from('scans')
+        .insert([{
+          result: scanResult.status,
+          confidence: scanResult.score,
+          image_url: publicUrl,
+          variety: "Puyat"
+        }]);
+
+      if (dbError) throw dbError;
+
+      router.push("/history");
+    } catch (err) {
+      console.error("Error saving to Supabase:", err);
+      alert("Failed to save to cloud storage. Please check your connection.");
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   return (
@@ -431,6 +476,10 @@ export default function AssessPage() {
                   </span>
                 </span>
                 <div className="h-[2px] w-10 bg-slate-100" />
+              </div>
+              {/* Debug raw values */}
+              <div className="mt-2 text-[8px] text-slate-300 font-mono">
+                Model Confidence: {scanResult.score / 100}
               </div>
             </div>
 

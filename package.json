@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
+    "@supabase/supabase-js": "^2.104.1",
     "@tensorflow/tfjs-backend-cpu": "^4.9.0",
     "@tensorflow/tfjs-backend-webgl": "^4.9.0",
     "@tensorflow/tfjs-core": "^4.9.0",
