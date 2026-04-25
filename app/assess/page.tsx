@@ -16,6 +16,10 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import * as tf from "@tensorflow/tfjs-core";
+import "@tensorflow/tfjs-backend-cpu";
+import "@tensorflow/tfjs-backend-webgl";
+import * as tflite from "@tensorflow/tfjs-tflite";
 
 export default function AssessPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -35,6 +39,7 @@ export default function AssessPage() {
   const [facingMode, setFacingMode] = useState<"environment" | "user">(
     "environment"
   );
+  const [model, setModel] = useState<tflite.TFLiteModel | null>(null);
 
   const router = useRouter();
 
@@ -58,6 +63,20 @@ export default function AssessPage() {
     startCamera();
     return () => stream?.getTracks().forEach((track) => track.stop());
   }, [facingMode]);
+
+  useEffect(() => {
+    const loadModel = async () => {
+      try {
+        tflite.setWasmPath('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/wasm/');
+        const loadedModel = await tflite.loadTFLiteModel('/unta_kaloy_an_na_v6.tflite');
+        setModel(loadedModel);
+        console.log("Model loaded successfully");
+      } catch (err) {
+        console.error("Error loading TFLite model:", err);
+      }
+    };
+    loadModel();
+  }, []);
 
   const toggleTorch = async () => {
     const track = stream?.getVideoTracks()[0];
@@ -97,17 +116,67 @@ export default function AssessPage() {
     }
   };
 
-  const processImage = (dataUrl: string) => {
+  const processImage = async (dataUrl: string) => {
     setCapturedImage(dataUrl);
     setIsScanning(true);
-    setTimeout(() => {
-      const results = ["Ripe", "Unripe", "Overripe"];
-      setScanResult({
-        status: results[Math.floor(Math.random() * results.length)],
-        score: parseFloat((Math.random() * (99 - 88) + 88).toFixed(1)),
+
+    if (!model) {
+      console.warn("Model not loaded yet");
+      setTimeout(() => setIsScanning(false), 1000);
+      return;
+    }
+
+    try {
+      const img = new window.Image();
+      img.src = dataUrl;
+      await new Promise((resolve) => {
+        img.onload = resolve;
       });
+
+      const tensor = tf.browser.fromPixels(img);
+      const inputShape = model.inputs[0].shape;
+      
+      let resized = tensor;
+      if (inputShape && inputShape.length > 2) {
+        const height = inputShape[1] > 0 ? inputShape[1] : 224;
+        const width = inputShape[2] > 0 ? inputShape[2] : 224;
+        resized = tf.image.resizeBilinear(tensor, [height, width]);
+      }
+      
+      // Attempting to match float16 tensor expectation or standard float32
+      let floatTensor = tf.cast(resized, 'float32');
+      floatTensor = tf.div(floatTensor, 255.0);
+
+      if (inputShape && inputShape.length === 4 && floatTensor.shape.length === 3) {
+        floatTensor = tf.expandDims(floatTensor, 0);
+      }
+
+      const output = model.predict(floatTensor) as tf.Tensor;
+      const predictions = await output.data();
+
+      // Match the exact class mapping from the model
+      const labels = ["Not Durian", "Ripe", "Semi Ripe", "Unripe"]; 
+      
+      let maxIdx = 0;
+      for (let i = 1; i < predictions.length; i++) {
+        if (predictions[i] > predictions[maxIdx]) maxIdx = i;
+      }
+      
+      setScanResult({
+        status: labels[maxIdx] || "Unknown",
+        score: parseFloat((predictions[maxIdx] * 100).toFixed(1)),
+      });
+
+      tensor.dispose();
+      if (resized !== tensor) resized.dispose();
+      floatTensor.dispose();
+      output.dispose();
+
+    } catch (err) {
+      console.error(err);
+    } finally {
       setIsScanning(false);
-    }, 2200);
+    }
   };
 
   const capturePhoto = () => {
@@ -336,7 +405,7 @@ export default function AssessPage() {
                 className={`text-6xl font-black italic tracking-tighter ${
                   scanResult.status === "Ripe"
                     ? "text-emerald-600"
-                    : scanResult.status === "Overripe"
+                    : scanResult.status === "Not Durian"
                     ? "text-rose-600"
                     : "text-amber-500"
                 }`}
