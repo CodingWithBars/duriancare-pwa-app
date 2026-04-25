@@ -21,6 +21,7 @@ import "@tensorflow/tfjs-backend-cpu";
 import "@tensorflow/tfjs-backend-webgl";
 import * as tflite from "@tensorflow/tfjs-tflite";
 import { supabase } from "@/lib/supabase";
+import { addToSyncQueue } from "@/lib/sync";
 
 export default function AssessPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -216,9 +217,24 @@ export default function AssessPage() {
   const saveToHistory = async () => {
     if (!capturedImage || !scanResult) return;
     
-    setIsScanning(true); // Re-use scanning state for loading indicator
+    setIsScanning(true); 
+
+    // Handle Offline State
+    if (!navigator.onLine) {
+      console.log("Offline detected, adding to sync queue...");
+      addToSyncQueue({
+        result: scanResult.status,
+        confidence: scanResult.score,
+        image_data: capturedImage,
+        variety: "Puyat"
+      });
+      setIsScanning(false);
+      router.push("/history");
+      return;
+    }
     
     try {
+      // ... existing online save logic ...
       // 1. Convert base64 to Blob
       const response = await fetch(capturedImage);
       const blob = await response.blob();
