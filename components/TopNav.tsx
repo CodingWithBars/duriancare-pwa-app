@@ -8,6 +8,20 @@ export default function TopNav() {
   const pathname = usePathname();
   const router = useRouter();
 
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
+
   const getTitle = (path: string) => {
     if (path === "/") return "DurianCare";
     if (path === "/assess") return "Ripeness Scan";
@@ -34,9 +48,21 @@ export default function TopNav() {
           </button>
         )}
         <div className="flex flex-col">
-          <h1 className="text-xl font-black text-slate-900 tracking-tighter italic leading-none">
-            {getTitle(pathname).toUpperCase()}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-black text-slate-900 tracking-tighter italic leading-none">
+              {getTitle(pathname).toUpperCase()}
+            </h1>
+            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border ${
+              isOnline ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'
+            }`}>
+              <div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+              <span className={`text-[7px] font-black uppercase tracking-tighter ${
+                isOnline ? 'text-emerald-600' : 'text-rose-600'
+              }`}>
+                {isOnline ? 'Live' : 'Offline'}
+              </span>
+            </div>
+          </div>
           {pathname === "/" && (
             <span className="text-[9px] font-black text-emerald-600 uppercase tracking-[0.2em] mt-0.5">
               Hybrid CNN-ViT PRO

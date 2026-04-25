@@ -51,18 +51,6 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
             </div>
           </motion.div>
         )}
-        
-        {!isOnline && (
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="fixed top-24 left-1/2 -translate-x-1/2 z-[200]"
-          >
-            <div className="bg-rose-500 text-white px-4 py-1.5 rounded-full shadow-lg flex items-center gap-2">
-              <CloudOff size={14} />
-              <span className="text-[10px] font-black uppercase tracking-widest">Offline Mode</span>
-            </div>
-          </motion.div>
-        )}
       </AnimatePresence>
       {children}
     </>
