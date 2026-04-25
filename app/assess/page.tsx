@@ -68,7 +68,7 @@ export default function AssessPage() {
     const loadModel = async () => {
       try {
         tflite.setWasmPath('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/wasm/');
-        const loadedModel = await tflite.loadTFLiteModel('/unta_kaloy_an_na_v6.tflite');
+        const loadedModel = await tflite.loadTFLiteModel('/fusion_model_float32.tflite');
         setModel(loadedModel);
         console.log("Model loaded successfully");
       } catch (err) {
