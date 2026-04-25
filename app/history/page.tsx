@@ -17,6 +17,7 @@ interface Assessment {
   confidence: number;
   image_url: string;
   variety: string;
+  is_correct?: boolean;
 }
 
 export default function HistoryPage() {
@@ -82,6 +83,22 @@ export default function HistoryPage() {
       setSelectedIds([]);
       setIsSelectionMode(false);
     }
+  };
+
+  const toggleCorrectness = async (item: Assessment) => {
+    const newValue = item.is_correct === false ? true : false;
+    const { error } = await supabase
+      .from('scans')
+      .update({ is_correct: newValue })
+      .eq('id', item.id);
+
+    if (error) {
+      alert("Failed to update status.");
+      return;
+    }
+    
+    loadData();
+    setSelectedEntry({ ...item, is_correct: newValue });
   };
 
   const getResultColor = (result: string) => {
@@ -171,6 +188,11 @@ export default function HistoryPage() {
                     <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${getResultColor(item.result)}`}>
                       {item.result}
                     </span>
+                    {item.is_correct === false && (
+                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-rose-500 text-white border-rose-500">
+                        Mislabeled
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-bold">
                     <Calendar size={12} /> {new Date(item.created_at).toLocaleDateString()} • {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -290,12 +312,24 @@ export default function HistoryPage() {
                   </div>
                 </div>
 
-                <button 
-                  onClick={() => setSelectedEntry(null)} 
-                  className="w-full bg-slate-900 text-white py-5 rounded-[24px] font-black text-lg shadow-xl active:scale-95 transition-all"
-                >
-                  Close Record
-                </button>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => toggleCorrectness(selectedEntry)} 
+                    className={`flex-1 py-5 rounded-[24px] font-black text-lg transition-all active:scale-95 border-2 ${
+                      selectedEntry.is_correct === false 
+                        ? "bg-emerald-500 text-white border-emerald-500 shadow-xl shadow-emerald-200" 
+                        : "bg-white text-rose-500 border-rose-100 shadow-sm"
+                    }`}
+                  >
+                    {selectedEntry.is_correct === false ? "Mark as Correct" : "Mark as Wrong"}
+                  </button>
+                  <button 
+                    onClick={() => setSelectedEntry(null)} 
+                    className="flex-1 bg-slate-900 text-white py-5 rounded-[24px] font-black text-lg shadow-xl active:scale-95 transition-all"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>

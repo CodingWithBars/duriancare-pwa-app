@@ -18,6 +18,7 @@ interface Assessment {
   confidence: number;
   image_url: string;
   variety: string;
+  is_correct?: boolean;
 }
 
 export default function Home() {
