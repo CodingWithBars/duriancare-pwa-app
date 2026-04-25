@@ -7,7 +7,8 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "node -e \"require('fs').copyFileSync('node_modules/@tensorflow/tfjs-tflite/wasm/tflite_web_api_client.js', 'node_modules/@tensorflow/tfjs-tflite/dist/tflite_web_api_client.js')\""
+    "postinstall": "node -e \"require('fs').copyFileSync('node_modules/@tensorflow/tfjs-tflite/wasm/tflite_web_api_client.js', 'node_modules/@tensorflow/tfjs-tflite/dist/tflite_web_api_client.js')\"",
+    "postbuild": "node -e \"const fs=require('fs'); fs.mkdirSync('.next/static/chunks/app/assess', {recursive: true}); fs.cpSync('node_modules/@tensorflow/tfjs-tflite/wasm', '.next/static/chunks/app/assess', {recursive: true});\""
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -26,6 +27,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "copy-webpack-plugin": "^14.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "tailwindcss": "^4",
