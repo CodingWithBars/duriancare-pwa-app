@@ -145,20 +145,27 @@ export default function AssessPage() {
       const tensor = tf.browser.fromPixels(img);
       const inputShape = model.inputs[0].shape;
       
-      let resized = tensor;
+      // 1. Center crop to a square to prevent squishing distortion from camera
+      const [h, w] = tensor.shape;
+      const size = Math.min(h, w);
+      const startY = Math.floor((h - size) / 2);
+      const startX = Math.floor((w - size) / 2);
+      const cropped = tf.slice(tensor, [startY, startX, 0], [size, size, 3]);
+
+      const inputShape = model.inputs[0].shape;
+      
+      let resized = cropped;
       if (inputShape && inputShape.length > 2) {
         const height = inputShape[1] > 0 ? inputShape[1] : 224;
         const width = inputShape[2] > 0 ? inputShape[2] : 224;
-        resized = tf.image.resizeBilinear(tensor, [height, width]);
+        resized = tf.image.resizeBilinear(cropped, [height, width]);
       }
       
-      // Preprocessing: Many Keras/OpenCV models expect BGR instead of RGB
-      const [r, g, b] = tf.split(resized, 3, 2);
-      const bgr = tf.concat([b, g, r], 2);
+      // Preprocessing: Most modern CNN/ViT models expect RGB. Swapping to BGR ruins yellow/green ripeness detection.
+      const floatTensorBase = tf.cast(resized, 'float32');
       
-      // Try both normalizations internally if needed, but we'll stick to [-1, 1] first with BGR
-      const floatTensorBase = tf.cast(bgr, 'float32');
-      let floatTensor = tf.sub(tf.div(floatTensorBase, tf.scalar(127.5)), tf.scalar(1.0));
+      // Normalize to [0, 1] which is standard for most ViT/CNN models
+      let floatTensor = tf.div(floatTensorBase, tf.scalar(255.0));
 
       if (inputShape && inputShape.length === 4 && floatTensor.shape.length === 3) {
         floatTensor = tf.expandDims(floatTensor, 0);
@@ -169,9 +176,6 @@ export default function AssessPage() {
       
       // Convert Logits to Probabilities using Softmax
       const predictions = tf.softmax(tf.tensor1d(rawPredictions)).dataSync();
-      
-      // Cleanup intermediate BGR tensors
-      r.dispose(); g.dispose(); b.dispose(); bgr.dispose();
       
       console.log("Raw Predictions (Logits):", rawPredictions);
       console.log("Probabilities (Softmax):", predictions);
@@ -192,7 +196,8 @@ export default function AssessPage() {
       });
 
       tensor.dispose();
-      if (resized !== tensor) resized.dispose();
+      if (cropped !== tensor) cropped.dispose();
+      if (resized !== cropped && resized !== tensor) resized.dispose();
       floatTensorBase.dispose();
       floatTensor.dispose();
       output.dispose();
