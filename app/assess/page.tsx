@@ -53,7 +53,12 @@ export default function AssessPage() {
     }
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facingMode, zoom: true } as any,
+        video: { 
+          facingMode: facingMode, 
+          zoom: true,
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        } as any,
         audio: false,
       });
       setStream(mediaStream);
@@ -164,8 +169,8 @@ export default function AssessPage() {
       // Preprocessing: Most modern CNN/ViT models expect RGB. Swapping to BGR ruins yellow/green ripeness detection.
       const floatTensorBase = tf.cast(resized, 'float32');
       
-      // Normalize to [0, 1] which is standard for most ViT/CNN models
-      let floatTensor = tf.div(floatTensorBase, tf.scalar(255.0));
+      // Normalize to [-1, 1] which is standard for MobileNetV2 / Teachable Machine models
+      let floatTensor = tf.sub(tf.div(floatTensorBase, tf.scalar(127.5)), tf.scalar(1.0));
 
       if (inputShape && inputShape.length === 4 && floatTensor.shape.length === 3) {
         floatTensor = tf.expandDims(floatTensor, 0);
@@ -215,7 +220,7 @@ export default function AssessPage() {
       canvasRef.current.width = videoRef.current.videoWidth;
       canvasRef.current.height = videoRef.current.videoHeight;
       context?.drawImage(videoRef.current, 0, 0);
-      processImage(canvasRef.current.toDataURL("image/jpeg", 0.85));
+      processImage(canvasRef.current.toDataURL("image/jpeg", 1.0));
     }
   };
 
