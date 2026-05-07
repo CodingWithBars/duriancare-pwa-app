@@ -11,7 +11,9 @@ const withPWA = withPWAInit({
   disable: false,
   workboxOptions: {
     disableDevLogs: true,
+    maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
   },
+  publicExcludes: ["fusion_model_float32.tflite", "tflite/**"],
 });
 
 const nextConfig: NextConfig = {

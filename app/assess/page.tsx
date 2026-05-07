@@ -21,7 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import * as tf from "@tensorflow/tfjs-core";
 import "@tensorflow/tfjs-backend-cpu";
 import "@tensorflow/tfjs-backend-webgl";
-import * as tflite from "@tensorflow/tfjs-tflite";
+import type * as tfliteType from "@tensorflow/tfjs-tflite";
 import { supabase } from "@/lib/supabase";
 import { addToSyncQueue } from "@/lib/sync";
 
@@ -44,7 +44,7 @@ export default function AssessPage() {
   const [facingMode, setFacingMode] = useState<"environment" | "user">(
     "environment"
   );
-  const [model, setModel] = useState<tflite.TFLiteModel | null>(null);
+  const [model, setModel] = useState<tfliteType.TFLiteModel | null>(null);
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [modelError, setModelError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
@@ -91,6 +91,7 @@ export default function AssessPage() {
       setIsModelLoading(true);
       setModelError(null);
       try {
+        const tflite = await import("@tensorflow/tfjs-tflite");
         tflite.setWasmPath('/tflite/');
         const loadedModel = await tflite.loadTFLiteModel('/fusion_model_float32.tflite');
         setModel(loadedModel);
