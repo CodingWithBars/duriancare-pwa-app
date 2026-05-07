@@ -368,9 +368,9 @@ export default function AssessPage() {
 
         <div className="flex flex-col items-end gap-3">
           <div className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-xl transition-colors ${
-            isOffline ? 'bg-slate-700' : isModelLoading ? 'bg-amber-500' : modelError ? 'bg-red-500' : 'bg-emerald-500'
+            isOffline && !isModelLoading ? 'bg-emerald-500' : isOffline ? 'bg-slate-700' : isModelLoading ? 'bg-amber-500' : modelError ? 'bg-red-500' : 'bg-emerald-500'
           }`}>
-            <div className={`w-2 h-2 bg-white rounded-full ${isOffline ? '' : isModelLoading ? 'animate-bounce' : 'animate-pulse'}`} />
+            <div className={`w-2 h-2 bg-white rounded-full ${isModelLoading ? 'animate-bounce' : 'animate-pulse'}`} />
             <span className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
               {isOffline ? <><WifiOff size={10} /> Offline Mode</> : isModelLoading ? 'Loading AI Model...' : modelError ? 'AI ERROR' : 'AI Ready'}
             </span>
