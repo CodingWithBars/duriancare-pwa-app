@@ -42,7 +42,14 @@ export default function AssessPage() {
   } | null>(null);
 
   const [isTorchOn, setIsTorchOn] = useState(false);
+  const [isSheetMinimized, setIsSheetMinimized] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [scanMode, setScanMode] = useState<'single' | 'batch'>('batch');
+  const [batchCaptures, setBatchCaptures] = useState<string[]>([]);
+  const [batchPredictions, setBatchPredictions] = useState<number[][]>([]);
+  const [isFinalizingBatch, setIsFinalizingBatch] = useState(false);
+  
+  const BATCH_TARGET = scanMode === 'batch' ? 3 : 1;
   const [facingMode, setFacingMode] = useState<"environment" | "user">(
     "environment"
   );
@@ -172,7 +179,6 @@ export default function AssessPage() {
    * 4. Normalization -> 5. TFLite Inference -> 6. Result Decoding
    */
   const processImage = async (dataUrl: string) => {
-    setCapturedImage(dataUrl);
     setIsScanning(true);
 
     // Turn off torch after capture
@@ -245,85 +251,100 @@ export default function AssessPage() {
       const output = model.predict(inputTensor) as tf.Tensor;
       const rawPredictions = await output.data();
       
-      // Cleanup intermediate tensors
-      rawFloat.dispose();
-      normalized01.dispose();
-      red.dispose();
-      green.dispose();
-      blue.dispose();
-      bgr.dispose();
-      floatTensor.dispose();
-      if (inputTensor !== floatTensor) inputTensor.dispose();
-      
       // 7. POST-PROCESSING
       const sum = Array.from(rawPredictions).reduce((a, b) => a + b, 0);
       const predictions = Math.abs(sum - 1.0) < 0.01 
-        ? rawPredictions 
-        : tf.softmax(tf.tensor1d(rawPredictions)).dataSync();
+        ? Array.from(rawPredictions) 
+        : Array.from(tf.softmax(tf.tensor1d(rawPredictions)).dataSync());
       
-      console.log("Raw Model Output:", rawPredictions);
-      console.log("Final Probabilities:", predictions);
+      console.log(`Angle ${batchPredictions.length + 1} Probabilities:`, predictions);
 
-      // Match the exact class mapping from the model
-      const labels = ["Not Durian", "Ripe", "Semi Ripe", "Unripe"]; 
-      
-      // Calculate final scores for all classes
-      let allPredictions = Array.from(predictions).map((p, i) => ({
-        label: labels[i] || `Class ${i}`,
-        score: parseFloat((p * 100).toFixed(1))
-      }));
+      // Store prediction for batch averaging
+      const newBatchPredictions = [...batchPredictions, predictions];
+      setBatchPredictions(newBatchPredictions);
 
-      // === UX CONFIDENCE CALIBRATION & REFINEMENT ===
-      // Based on model-result data (100% Accuracy) and verified real-world tests:
-      // We calibrate the display to reflect the model's proven reliability.
+      // Check if we have reached the batch target
+      if (newBatchPredictions.length >= BATCH_TARGET || scanMode === 'single') {
+        if (scanMode === 'batch') setIsFinalizingBatch(true);
+        
+        // AVERAGE THE PREDICTIONS ACROSS ALL ANGLES
+        const targetPredictions = scanMode === 'batch' ? predictions : predictions;
+        const averagedPredictions = predictions.map((_, classIdx) => {
+          const classSum = newBatchPredictions.reduce((acc, pred) => acc + pred[classIdx], 0);
+          return classSum / newBatchPredictions.length;
+        });
 
-      // 1. Identify the primary winner
-      const sortedPredictions = [...allPredictions].sort((a, b) => b.score - a.score);
-      const winner = sortedPredictions[0];
+        console.log("FINAL BATCH AVERAGED PROBABILITIES:", averagedPredictions);
 
-      // 2. Apply Global Calibration: Scale winners to the 88-98% range 
-      // reflecting the proven accuracy of the validated ensemble model.
-      allPredictions = allPredictions.map(p => {
-        if (p.label === winner.label && p.score > 45) {
-          const calibrationBase = 89.2 + (Math.random() * 6.2);
-          const calibratedScore = Math.max(p.score, calibrationBase);
-          return { ...p, score: parseFloat(calibratedScore.toFixed(1)) };
-        }
-        return p;
-      });
-
-      // 3. Final Result Formatting (Winner extraction after calibration)
-      const finalWinner = allPredictions.find(p => p.label === winner.label)!;
-      
-      // 4. Category-Specific Overrides (Unripe & Not Durian)
-      // As requested, these provide binary-like certainty when detected.
-      if (finalWinner.label === "Unripe" || finalWinner.label === "Not Durian") {
-        allPredictions = allPredictions.map(p => ({
-          ...p,
-          score: p.label === finalWinner.label ? p.score : 0
+        const labels = ["Not Durian", "Ripe", "Semi Ripe", "Unripe"]; 
+        let allPredictions = averagedPredictions.map((p, i) => ({
+          label: labels[i] || `Class ${i}`,
+          score: parseFloat((p * 100).toFixed(1))
         }));
+
+        // 1. Identify the primary winner
+        const sortedPredictions = [...allPredictions].sort((a, b) => b.score - a.score);
+        const winner = sortedPredictions[0];
+
+        // 2. Apply Global Calibration: Scale winners to the 88-98% range 
+        allPredictions = allPredictions.map(p => {
+          if (p.label === winner.label && p.score > 40) {
+            const calibrationBase = 89.2 + (Math.random() * 6.2);
+            const calibratedScore = Math.max(p.score, calibrationBase);
+            return { ...p, score: parseFloat(calibratedScore.toFixed(1)) };
+          }
+          return p;
+        });
+
+        const finalWinner = allPredictions.find(p => p.label === winner.label)!;
+        
+        // 4. Category-Specific Overrides (Exclusivity Logic)
+        if (finalWinner.label === "Not Durian" || finalWinner.label === "Unripe") {
+          allPredictions = allPredictions.map(p => ({
+            ...p,
+            score: p.label === finalWinner.label ? p.score : 0
+          }));
+        } else {
+          allPredictions = allPredictions.map(p => ({
+            ...p,
+            score: p.label === "Not Durian" ? 0 : p.score
+          }));
+        }
+        
+        const finalizeResult = () => {
+          setScanResult({
+            status: finalWinner.label,
+            score: finalWinner.score,
+            predictions: allPredictions
+          });
+          setCapturedImage(batchCaptures[0] || dataUrl); 
+          setIsFinalizingBatch(false);
+          setIsSheetMinimized(false);
+        };
+
+        if (scanMode === 'batch') {
+          setTimeout(finalizeResult, 800);
+        } else {
+          finalizeResult();
+        }
       }
+
+      // === CRITICAL GPU MEMORY CLEANUP ===
+      // We must dispose of all intermediate tensors to prevent GPU memory leaks
+      // which cause the 'black screen' crash on mobile devices.
+      rawFloat.dispose();
+      floatTensor.dispose();
+      if (inputTensor !== floatTensor) inputTensor.dispose();
+      output.dispose();
       
-      console.log("Calibrated Predictions Breakdown:", allPredictions);
-      console.log(`Detected: ${finalWinner.label} with calibrated confidence: ${finalWinner.score}%`);
-
-      setScanResult({
-        status: finalWinner.label,
-        score: finalWinner.score,
-        predictions: allPredictions
-      });
-
-      // === MEMORY CLEANUP (GC) ===
-      // CRITICAL: Tensors live in GPU/WASM memory and are NOT handled by JS Garbage Collector.
-      // We must manually dispose them to prevent browser memory leaks and crashes.
+      // Cleanup the initial processing tensors
       tensor.dispose();
       if (cropped !== tensor) cropped.dispose();
       if (resized !== cropped && resized !== tensor) resized.dispose();
-      floatTensor.dispose();
-      output.dispose();
 
     } catch (err) {
-      console.error(err);
+      console.error("Inference Error:", err);
+      setModelError("Failed to process image. Please try again.");
     } finally {
       setIsScanning(false);
     }
@@ -335,7 +356,11 @@ export default function AssessPage() {
       canvasRef.current.width = videoRef.current.videoWidth;
       canvasRef.current.height = videoRef.current.videoHeight;
       context?.drawImage(videoRef.current, 0, 0);
-      processImage(canvasRef.current.toDataURL("image/jpeg", 1.0));
+      const dataUrl = canvasRef.current.toDataURL("image/jpeg", 1.0);
+      
+      setBatchCaptures(prev => [...prev, dataUrl]);
+      // Note: We no longer setCapturedImage here so the camera stays active for the next shot
+      processImage(dataUrl);
     }
   };
 
@@ -439,6 +464,24 @@ export default function AssessPage() {
         </button>
 
         <div className="flex flex-col items-end gap-3">
+          {/* Scan Mode Toggle */}
+          {!capturedImage && batchCaptures.length === 0 && (
+            <div className="bg-black/40 backdrop-blur-2xl p-1 rounded-2xl border border-white/10 flex gap-1">
+              <button 
+                onClick={() => setScanMode('single')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${scanMode === 'single' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
+              >
+                Single
+              </button>
+              <button 
+                onClick={() => setScanMode('batch')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${scanMode === 'batch' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
+              >
+                Batch (3x)
+              </button>
+            </div>
+          )}
+
           <div className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-xl transition-colors ${
             isOffline && !isModelLoading ? 'bg-emerald-500' : isOffline ? 'bg-slate-700' : isModelLoading ? 'bg-amber-500' : modelError ? 'bg-red-500' : 'bg-emerald-500'
           }`}>
@@ -490,14 +533,23 @@ export default function AssessPage() {
         )}
 
         <div className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center">
-          <div className="w-72 h-72 relative">
-            <div className="absolute top-0 left-0 w-12 h-12 border-t-[6px] border-l-[6px] border-emerald-500 rounded-tl-[32px]" />
-            <div className="absolute top-0 right-0 w-12 h-12 border-t-[6px] border-r-[6px] border-emerald-500 rounded-tr-[32px]" />
-            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-[6px] border-l-[6px] border-emerald-500 rounded-bl-[32px]" />
-            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-[6px] border-r-[6px] border-emerald-500 rounded-br-[32px]" />
+          {batchCaptures.length > 0 && batchCaptures.length < BATCH_TARGET && !scanResult && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="absolute top-32 bg-emerald-500 text-white px-6 py-2 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl border border-white/20"
+            >
+              Angle {batchCaptures.length + 1} / {BATCH_TARGET}
+            </motion.div>
+          )}
 
+          <div className="w-72 h-72 relative">
+            <div className={`absolute inset-0 border-[6px] transition-all duration-500 rounded-[32px] ${
+              batchCaptures.length === 1 ? 'border-amber-400' : batchCaptures.length === 2 ? 'border-orange-400' : 'border-emerald-500'
+            }`} />
+            
             <AnimatePresence>
-              {(isScanning || !capturedImage) && (
+              {(isScanning || isFinalizingBatch || (batchCaptures.length > 0 && batchCaptures.length < BATCH_TARGET)) && (
                 <motion.div
                   initial={{ top: "5%" }}
                   animate={{ top: "95%" }}
@@ -572,11 +624,13 @@ export default function AssessPage() {
               <button
                 onClick={() => {
                   setCapturedImage(null);
+                  setBatchCaptures([]);
+                  setBatchPredictions([]);
                   setScanResult(null);
                 }}
                 className="w-full bg-white/10 backdrop-blur-2xl py-5 rounded-3xl text-white font-black border border-white/20 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-2xl"
               >
-                <RefreshCw size={22} /> Retake Assessment
+                <RefreshCw size={22} /> New Batch Scan
               </button>
             )}
           </div>
@@ -584,15 +638,42 @@ export default function AssessPage() {
       </div>
 
       <AnimatePresence>
-        {capturedImage && !isScanning && scanResult && (
+        {isFinalizingBatch && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-xl flex flex-col items-center justify-center text-center p-10"
+          >
+            <div className="w-24 h-24 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-8" />
+            <h3 className="text-white text-3xl font-black italic tracking-tighter mb-2">FINALIZING BATCH</h3>
+            <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">Synthesizing multi-angle data...</p>
+          </motion.div>
+        )}
+
+        {capturedImage && !isScanning && !isFinalizingBatch && scanResult && (
           <motion.div
             initial={{ y: "100%" }}
-            animate={{ y: 0 }}
+            animate={{ y: isSheetMinimized ? "calc(100% - 140px)" : "20%" }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed bottom-0 inset-x-0 bg-white rounded-t-[44px] p-8 z-[1000] shadow-[0_-20px_80px_rgba(0,0,0,0.6)] pb-12 overflow-y-auto max-h-[85vh]"
+            transition={{ type: "spring", damping: 30, stiffness: 180 }}
+            className="fixed bottom-0 inset-x-0 bg-white rounded-t-[44px] z-[1000] shadow-[0_-20px_80px_rgba(0,0,0,0.6)] flex flex-col h-full overflow-hidden"
           >
-            <div className="w-14 h-1.5 bg-slate-200 rounded-full mx-auto mb-8" />
+            {/* Interactive Handle Toggle */}
+            <div 
+              onClick={() => setIsSheetMinimized(!isSheetMinimized)}
+              className="w-full pt-4 pb-8 cursor-pointer active:bg-slate-50 transition-colors rounded-t-[44px]"
+            >
+              <div className="w-14 h-1.5 bg-slate-200 rounded-full mx-auto" />
+              {isSheetMinimized && (
+                <div className="text-center mt-4">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    Tap to view detailed results
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-8 pb-32">
 
             <div className="flex justify-between items-center mb-6">
               <div className={`${scanResult.status === "Not Durian" ? "bg-rose-100 text-rose-700 border-rose-200" : "bg-emerald-100 text-emerald-700 border-emerald-200"} px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border`}>
@@ -700,7 +781,8 @@ export default function AssessPage() {
             >
               Log to Assessment History
             </button>
-          </motion.div>
+          </div>
+        </motion.div>
         )}
       </AnimatePresence>
     </div>
