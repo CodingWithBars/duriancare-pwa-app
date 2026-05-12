@@ -44,7 +44,7 @@ export default function AssessPage() {
   const [isTorchOn, setIsTorchOn] = useState(false);
   const [isSheetMinimized, setIsSheetMinimized] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [scanMode, setScanMode] = useState<'single' | 'batch'>('batch');
+  const [scanMode, setScanMode] = useState<'single' | 'batch'>('single');
   const [batchCaptures, setBatchCaptures] = useState<string[]>([]);
   const [batchPredictions, setBatchPredictions] = useState<number[][]>([]);
   const [isFinalizingBatch, setIsFinalizingBatch] = useState(false);
@@ -444,13 +444,29 @@ export default function AssessPage() {
         ref={fileInputRef}
         className="hidden"
         accept="image/*"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) =>
-              processImage(event.target?.result as string);
-            reader.readAsDataURL(file);
+        multiple={scanMode === 'batch'}
+        onChange={async (e) => {
+          const files = Array.from(e.target.files || []);
+          if (files.length === 0) return;
+
+          // Clear previous batch state
+          setBatchCaptures([]);
+          setBatchPredictions([]);
+          setCapturedImage(null);
+          setScanResult(null);
+
+          const targetFiles = scanMode === 'batch' ? files.slice(0, BATCH_TARGET) : [files[0]];
+          
+          for (const file of targetFiles) {
+            const dataUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = (event) => resolve(event.target?.result as string);
+              reader.readAsDataURL(file);
+            });
+            
+            // Sequential processing for batch accuracy
+            setBatchCaptures(prev => [...prev, dataUrl]);
+            await processImage(dataUrl);
           }
         }}
       />
