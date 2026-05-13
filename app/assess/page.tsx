@@ -56,7 +56,8 @@ export default function AssessPage() {
   const [model, setModel] = useState<tfliteType.TFLiteModel | null>(null);
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [modelError, setModelError] = useState<string | null>(null);
-  const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
+  const [isOffline, setIsOffline] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const router = useRouter();
 
@@ -86,8 +87,13 @@ export default function AssessPage() {
   };
 
   useEffect(() => {
+    setIsMounted(true);
     startCamera();
     
+    if (typeof navigator !== 'undefined') {
+      setIsOffline(!navigator.onLine);
+    }
+
     const updateOnlineStatus = () => setIsOffline(!navigator.onLine);
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
@@ -108,10 +114,19 @@ export default function AssessPage() {
       try {
         const tflite = await import("@tensorflow/tfjs-tflite");
         tflite.setWasmPath('/tflite/');
-        const loadedModel = await tflite.loadTFLiteModel('/fusion_model_float32.tflite');
+        
+        // Use numThreads: 1 to avoid potential multi-threading issues that cause Aborted() crashes
+        const loadedModel = await tflite.loadTFLiteModel('/durian_hybrid_model.tflite', {
+          numThreads: 1
+        });
+        
+        // Debug model structure
+        console.log("Model loaded successfully");
+        console.log("Model Inputs Metadata:", JSON.stringify(loadedModel.inputs, null, 2));
+        console.log("Model Outputs Metadata:", JSON.stringify(loadedModel.outputs, null, 2));
+        
         setModel(loadedModel);
         setIsModelLoading(false);
-        console.log("Model loaded successfully");
       } catch (err) {
         console.error("Error loading TFLite model:", err);
         setModelError("Failed to initialize AI engine");
@@ -248,6 +263,9 @@ export default function AssessPage() {
       }
 
       // 7. INFERENCE
+      console.log("Input Tensor Shape:", inputTensor.shape);
+      console.log("Input Tensor DType:", inputTensor.dtype);
+      
       const output = model.predict(inputTensor) as tf.Tensor;
       const rawPredictions = await output.data();
       
@@ -435,6 +453,12 @@ export default function AssessPage() {
   };
 
   // === COMPONENT VIEW ===
+  if (!isMounted) {
+    return <div className="fixed inset-0 bg-black flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    </div>;
+  }
+
   return (
     <div className="fixed inset-0 h-[100dvh] w-full bg-black overflow-hidden flex flex-col select-none z-[9999]">
       {/* Hidden Tools */}
