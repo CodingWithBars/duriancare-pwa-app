@@ -282,7 +282,9 @@ export default function HistoryPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="font-black text-slate-900 text-sm truncate">{item.variety}</p>
+                    <p className="font-black text-slate-900 text-sm truncate">
+                      {item.result === "Not Durian" ? "Unknown" : item.variety}
+                    </p>
                     {item.is_offline ? (
                       <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-slate-100 text-slate-400 border border-slate-200">
                         Syncing...

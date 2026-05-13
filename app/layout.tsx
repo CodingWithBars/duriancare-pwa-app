@@ -5,8 +5,6 @@ import BottomNav from "../components/BottomNav";
 import TopNav from "../components/TopNav";
 import SyncProvider from "../components/SyncProvider";
 import PaymentLock from "../components/PaymentLock";
-import PaymentReminder from "../components/PaymentReminder";
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -64,7 +62,6 @@ export default function RootLayout({
               <BottomNav />
               
               {/* Global Overlays */}
-              <PaymentReminder />
             </div>
           </SyncProvider>
         </PaymentLock>

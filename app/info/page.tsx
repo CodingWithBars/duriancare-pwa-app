@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Cpu, Settings, Trash2, Smartphone, ShieldCheck, Info, Leaf } from "lucide-react";
+import { Cpu, Settings, Trash2, Smartphone, ShieldCheck, Info, Leaf, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import PWAInstall from "@/components/PWAInstall";
 import { RESTRICTION_DATE, SUPPORT_CONTACT, SYSTEM_ID } from "@/lib/constants";
 
@@ -48,6 +49,7 @@ function CountdownDisplay({ targetDate }: { targetDate: string }) {
 
 export default function InfoPage() {
   const [hapticFeedback, setHapticFeedback] = useState(true);
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
 
   const handleResetApp = () => {
     if (confirm("This will delete all your scan history. Continue?")) {
@@ -151,61 +153,92 @@ export default function InfoPage() {
           System Status & License
         </h3>
         
-        <div className="bg-slate-900 rounded-[32px] p-6 text-white shadow-xl shadow-slate-200">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-500 rounded-lg">
-                  <ShieldCheck size={18} className="text-white" />
-                </div>
-                <div>
-                  <p className="font-bold text-sm">System Active</p>
-                  <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase">ID: {SYSTEM_ID}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-black text-emerald-500 uppercase">Pro Licensed</p>
-              </div>
-            </div>
-
-            <div className="h-px bg-white/10 w-full" />
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Expiry Date</p>
-                <p className="text-xs font-bold text-amber-400">
-                  {new Date(RESTRICTION_DATE).toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric', 
-                    year: 'numeric' 
-                  })}
-                </p>
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Time Limit</p>
-                <p className="text-xs font-bold text-slate-200">
-                  {new Date(RESTRICTION_DATE).toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit'
-                  })}
-                </p>
-              </div>
-            </div>
-
-            {/* LIVE COUNTDOWN */}
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-              <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 text-center">Remaining Access Time</p>
-              <CountdownDisplay targetDate={RESTRICTION_DATE} />
-            </div>
-
-            <div className="pt-2">
-              <p className="text-slate-400 text-[10px] leading-relaxed italic">
-                System access is strictly bound to your license terms. For renewals or balance inquiries, please contact: <span className="text-white font-bold">{SUPPORT_CONTACT}</span>
-              </p>
-            </div>
+        <button 
+          onClick={() => setShowLicenseModal(true)}
+          className="w-full bg-slate-900 text-white p-5 rounded-[24px] font-black text-lg active:scale-95 transition-all flex items-center justify-between shadow-xl shadow-slate-200"
+        >
+          <div className="flex items-center gap-3">
+             <ShieldCheck size={20} className="text-emerald-400" />
+             <span>License</span>
           </div>
-        </div>
+          <span className="text-[10px] font-black text-emerald-500 uppercase">View Status</span>
+        </button>
       </section>
+
+      <AnimatePresence>
+        {showLicenseModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6"
+            onClick={() => setShowLicenseModal(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-slate-900 w-full max-w-sm rounded-[32px] p-6 text-white shadow-xl relative"
+              onClick={e => e.stopPropagation()}
+            >
+              <button 
+                onClick={() => setShowLicenseModal(false)}
+                className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-500 rounded-lg">
+                    <ShieldCheck size={18} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">System Active</p>
+                    <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase">ID: {SYSTEM_ID}</p>
+                  </div>
+                </div>
+
+                <div className="h-px bg-white/10 w-full" />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Expiry Date</p>
+                    <p className="text-xs font-bold text-amber-400">
+                      {new Date(RESTRICTION_DATE).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Time Limit</p>
+                    <p className="text-xs font-bold text-slate-200">
+                      {new Date(RESTRICTION_DATE).toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* LIVE COUNTDOWN */}
+                <div className="bg-white/5 rounded-2xl p-4 border border-white/5 mt-4">
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 text-center">Remaining Access Time</p>
+                  <CountdownDisplay targetDate={RESTRICTION_DATE} />
+                </div>
+
+                <div className="pt-2">
+                  <p className="text-slate-400 text-[10px] leading-relaxed italic text-center">
+                    For renewals or balance inquiries, please contact: <span className="text-white font-bold">{SUPPORT_CONTACT}</span>
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <section className="bg-emerald-50 border border-emerald-100 rounded-[32px] p-6 text-emerald-800">
         <div className="flex items-center gap-3 mb-2">

@@ -693,10 +693,10 @@ export default function AssessPage() {
         {capturedImage && !isScanning && !isFinalizingBatch && scanResult && (
           <motion.div
             initial={{ y: "100%" }}
-            animate={{ y: isSheetMinimized ? "calc(100% - 140px)" : "20%" }}
+            animate={{ y: isSheetMinimized ? "calc(100% - 140px)" : "0%" }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 180 }}
-            className="fixed bottom-0 inset-x-0 bg-white rounded-t-[44px] z-[1000] shadow-[0_-20px_80px_rgba(0,0,0,0.6)] flex flex-col h-full overflow-hidden"
+            className="fixed bottom-0 inset-x-0 bg-white rounded-t-[44px] z-[1000] shadow-[0_-20px_80px_rgba(0,0,0,0.6)] flex flex-col h-[85dvh] overflow-hidden"
           >
             {/* Interactive Handle Toggle */}
             <div 
