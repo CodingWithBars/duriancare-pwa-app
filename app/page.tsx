@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Onboarding from "../components/Onboarding";
 import PWAInstall from "@/components/PWAInstall";
 import { getSyncQueue } from "@/lib/sync";
+import HybridModelFactors from "@/components/HybridModelFactors";
 
 import { supabase } from "@/lib/supabase";
 
@@ -252,42 +253,12 @@ export default function Home() {
                 <div className="bg-white rounded-[32px] p-8 space-y-6 flex-1">
                   <div>
                     <h2 className="text-3xl font-black text-slate-900 mb-1">{selectedEntry.result}</h2>
-                    <p className="text-slate-500 font-bold text-sm">Variety: <span className="text-emerald-600">{selectedEntry.variety}</span></p>
+                    <p className="text-slate-500 font-bold text-sm">Variety: <span className="text-emerald-600">{selectedEntry.result === "Not Durian" ? "Unknown Object" : selectedEntry.variety}</span></p>
                   </div>
 
                   <div className="space-y-4">
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50 pb-2">Hybrid Model Factors</h4>
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-[11px] font-black text-slate-700 uppercase">
-                          <span>CNN Analysis (texture)</span>
-                          <span>{selectedEntry.result === "Not Durian" ? "0%" : `${Math.floor(selectedEntry.confidence * 0.92)}%`}</span>
-                        </div>
-                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                          <motion.div 
-                            initial={{ width: 0 }} 
-                            animate={{ width: selectedEntry.result === "Not Durian" ? "0%" : `${Math.floor(selectedEntry.confidence * 0.92)}%` }} 
-                            transition={{ delay: 0.3, duration: 1 }}
-                            className="h-full bg-emerald-500" 
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-[11px] font-black text-slate-700 uppercase">
-                          <span>ViT Analysis (spatial)</span>
-                          <span>{selectedEntry.result === "Not Durian" ? "0%" : `${Math.floor(selectedEntry.confidence * 0.88)}%`}</span>
-                        </div>
-                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                          <motion.div 
-                            initial={{ width: 0 }} 
-                            animate={{ width: selectedEntry.result === "Not Durian" ? "0%" : `${Math.floor(selectedEntry.confidence * 0.88)}%` }} 
-                            transition={{ delay: 0.5, duration: 1 }}
-                            className="h-full bg-blue-500" 
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    <HybridModelFactors status={selectedEntry.result} confidence={selectedEntry.confidence} seed={selectedEntry.id} />
                   </div>
 
                   <div className="h-px bg-slate-100 w-full" />

@@ -26,6 +26,7 @@ import "@tensorflow/tfjs-backend-cpu";
 import "@tensorflow/tfjs-backend-webgl";
 import type * as tfliteType from "@tensorflow/tfjs-tflite";
 import { supabase } from "@/lib/supabase";
+import HybridModelFactors from "@/components/HybridModelFactors";
 import { addToSyncQueue } from "@/lib/sync";
 
 export default function AssessPage() {
@@ -801,80 +802,9 @@ export default function AssessPage() {
               </div>
             </div>
 
-            {(() => {
-              const status = scanResult.status;
-              const confidence = scanResult.score;
-              const seed = confidence;
-              
-              const pseudoRandom = (offset: number) => {
-                const x = Math.sin(seed + offset) * 10000;
-                return x - Math.floor(x);
-              };
-
-              let spine = confidence;
-              let color = confidence;
-
-              if (status !== "Not Durian") {
-                if (status === "Ripe") {
-                  const spineBase = confidence - 1.5 + pseudoRandom(1) * 3;
-                  const colorBase = confidence + 0.5 + pseudoRandom(2) * 2;
-                  spine = confidence < 90 ? Math.min(89.9, spineBase) : Math.max(90, spineBase);
-                  color = confidence < 90 ? Math.min(89.9, colorBase) : Math.max(90, colorBase);
-                } else if (status === "Semi Ripe") {
-                  spine = confidence * 0.7 + pseudoRandom(3) * 5;
-                  color = confidence * 0.8 + pseudoRandom(4) * 5;
-                } else if (status === "Unripe") {
-                  spine = confidence * 0.3 + pseudoRandom(5) * 5;
-                  color = confidence * 0.2 + pseudoRandom(6) * 5;
-                }
-              } else {
-                spine = 0;
-                color = 0;
-              }
-
-              const fSpine = parseFloat(spine.toFixed(1));
-              const fColor = parseFloat(color.toFixed(1));
-
-              return (
-                <div className="mb-10 space-y-5 bg-slate-50 p-6 rounded-[32px] border border-slate-100 mx-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-black uppercase text-slate-900 tracking-widest flex items-center gap-2">
-                      <Activity size={14} className="text-emerald-500" />
-                      Hybrid Model Factors
-                    </h4>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase">
-                        <span className="flex items-center gap-1.5"><Leaf size={10}/> CNN Analysis (Spine)</span>
-                        <span>{fSpine}%</span>
-                      </div>
-                      <div className="h-2 w-full bg-slate-200/50 rounded-full overflow-hidden border border-slate-200/50">
-                        <motion.div 
-                          initial={{ width: 0 }} animate={{ width: `${fSpine}%` }}
-                          transition={{ duration: 1, delay: 0.2 }}
-                          className={`h-full rounded-full ${status === "Ripe" ? "bg-emerald-500" : status === "Not Durian" ? "bg-slate-300" : "bg-amber-400"}`}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase">
-                        <span className="flex items-center gap-1.5"><ThermometerSun size={10}/> ViT Analysis (Color)</span>
-                        <span>{fColor}%</span>
-                      </div>
-                      <div className="h-2 w-full bg-slate-200/50 rounded-full overflow-hidden border border-slate-200/50">
-                        <motion.div 
-                          initial={{ width: 0 }} animate={{ width: `${fColor}%` }}
-                          transition={{ duration: 1, delay: 0.4 }}
-                          className={`h-full rounded-full ${status === "Ripe" ? "bg-emerald-500" : status === "Not Durian" ? "bg-slate-300" : "bg-amber-400"}`}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+            <div className="mb-10 space-y-5 bg-slate-50 p-6 rounded-[32px] border border-slate-100 mx-2">
+              <HybridModelFactors status={scanResult.status} confidence={scanResult.score} seed={scanResult.score} />
+            </div>
 
             <div className="mb-10 p-6 rounded-[32px] bg-slate-900 text-white shadow-xl mx-2">
               <div className="flex items-center gap-2 mb-3">

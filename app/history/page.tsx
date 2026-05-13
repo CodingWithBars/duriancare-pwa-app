@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { syncOfflineScans, getSyncQueue } from "@/lib/sync";
 import { motion, AnimatePresence } from "framer-motion";
+import HybridModelFactors from "@/components/HybridModelFactors";
 
 import { supabase } from "@/lib/supabase";
 
@@ -392,70 +393,8 @@ export default function HistoryPage() {
                     <span className="text-[10px] font-bold text-slate-400">Validated</span>
                   </div>
 
-                  {(() => {
-                    const status = selectedEntry.result;
-                    const confidence = selectedEntry.confidence;
-                    const seed = typeof selectedEntry.id === 'number' ? selectedEntry.id : 1;
-                    
-                    const pseudoRandom = (offset: number) => {
-                      const x = Math.sin(seed + offset) * 10000;
-                      return x - Math.floor(x);
-                    };
-
-                    let spine = confidence;
-                    let color = confidence;
-
-                    if (status !== "Not Durian") {
-                      if (status === "Ripe") {
-                        const spineBase = confidence - 1.5 + pseudoRandom(1) * 3;
-                        const colorBase = confidence + 0.5 + pseudoRandom(2) * 2;
-                        spine = confidence < 90 ? Math.min(89.9, spineBase) : Math.max(90, spineBase);
-                        color = confidence < 90 ? Math.min(89.9, colorBase) : Math.max(90, colorBase);
-                      } else if (status === "Semi Ripe") {
-                        spine = confidence * 0.7 + pseudoRandom(3) * 5;
-                        color = confidence * 0.8 + pseudoRandom(4) * 5;
-                      } else if (status === "Unripe") {
-                        spine = confidence * 0.3 + pseudoRandom(5) * 5;
-                        color = confidence * 0.2 + pseudoRandom(6) * 5;
-                      }
-                    } else {
-                      spine = 0;
-                      color = 0;
-                    }
-
-                    const fSpine = parseFloat(spine.toFixed(1));
-                    const fColor = parseFloat(color.toFixed(1));
-
-                    return (
-                      <div className="space-y-4">
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase">
-                            <span className="flex items-center gap-1.5"><Leaf size={10}/> Spine Flexibility</span>
-                            <span>{fSpine}%</span>
-                          </div>
-                          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                            <motion.div 
-                              initial={{ width: 0 }} animate={{ width: `${fSpine}%` }}
-                              className={`h-full rounded-full ${status === "Ripe" ? "bg-emerald-500" : status === "Not Durian" ? "bg-slate-200" : "bg-amber-400"}`}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase">
-                            <span className="flex items-center gap-1.5"><ThermometerSun size={10}/> Shell Coloration</span>
-                            <span>{fColor}%</span>
-                          </div>
-                          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                            <motion.div 
-                              initial={{ width: 0 }} animate={{ width: `${fColor}%` }}
-                              className={`h-full rounded-full ${status === "Ripe" ? "bg-emerald-500" : status === "Not Durian" ? "bg-slate-200" : "bg-amber-400"}`}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
+                  {/* The actual progress bars */}
+                  <HybridModelFactors status={selectedEntry.result} confidence={selectedEntry.confidence} seed={selectedEntry.id} />
                 </div>
 
                 <div className="p-6 rounded-[28px] bg-slate-900 text-white shadow-xl">
