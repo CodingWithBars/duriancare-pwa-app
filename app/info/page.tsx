@@ -147,7 +147,7 @@ export default function InfoPage() {
         </div>
       </section>
 
-      <section className="space-y-4">
+      {/* <section className="space-y-4">
         <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
           <ShieldCheck size={14} />
           System Status & License
@@ -163,7 +163,7 @@ export default function InfoPage() {
           </div>
           <span className="text-[10px] font-black text-emerald-500 uppercase">View Status</span>
         </button>
-      </section>
+      </section> */}
 
       <AnimatePresence>
         {showLicenseModal && (
@@ -201,7 +201,7 @@ export default function InfoPage() {
 
                 <div className="h-px bg-white/10 w-full" />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="hidden grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Expiry Date</p>
                     <p className="text-xs font-bold text-amber-400">
@@ -223,8 +223,8 @@ export default function InfoPage() {
                   </div>
                 </div>
 
-                {/* LIVE COUNTDOWN */}
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/5 mt-4">
+                {/* LIVE COUNTDOWN (hidden for demo purposes) */}
+                <div className="hidden bg-white/5 rounded-2xl p-4 border border-white/5 mt-4">
                   <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 text-center">Remaining Access Time</p>
                   <CountdownDisplay targetDate={RESTRICTION_DATE} />
                 </div>
