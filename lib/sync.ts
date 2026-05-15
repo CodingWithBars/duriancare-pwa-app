@@ -6,6 +6,7 @@ export interface QueuedScan {
   confidence: number;
   image_data: string; // Base64 data to be uploaded later
   variety: string;
+  model_used: string;
 }
 
 const SYNC_QUEUE_KEY = "durian_sync_queue";
@@ -61,7 +62,8 @@ export const syncOfflineScans = async (onProgress?: (msg: string) => void) => {
           result: scan.result,
           confidence: scan.confidence,
           image_url: publicUrl,
-          variety: scan.variety
+          variety: scan.variety,
+          model_used: scan.model_used
         }]);
 
       if (dbError) throw dbError;

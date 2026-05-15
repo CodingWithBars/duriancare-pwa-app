@@ -19,6 +19,7 @@ interface Assessment {
   confidence: number;
   image_url: string;
   variety: string;
+  model_used?: string;
   is_correct?: boolean;
   is_offline?: boolean;
 }
@@ -33,29 +34,79 @@ export default function HistoryPage() {
   const [syncStatus, setSyncStatus] = useState("");
 
   const loadData = async () => {
-    // 1. Load from Supabase
-    const { data: cloudData, error } = await supabase
-      .from('scans')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error("Failed to fetch history from Supabase", error);
+    let cloudData = [];
+    
+    // 1. Immediate Cache Load (Cache-First)
+    const cached = localStorage.getItem('duriancare_cached_history');
+    if (cached) {
+      try {
+        cloudData = JSON.parse(cached);
+        const queue = getSyncQueue();
+        const queuedItems: Assessment[] = queue.map(q => ({
+          id: q.id,
+          created_at: new Date(parseInt(q.id)).toISOString(),
+          result: q.result,
+          confidence: q.confidence,
+          image_url: q.image_data,
+          variety: q.variety,
+          model_used: q.model_used,
+          is_offline: true
+        }));
+        setHistory([...queuedItems, ...cloudData] as Assessment[]);
+      } catch(e) {}
     }
 
-    // 2. Load from Local Sync Queue
-    const queue = getSyncQueue();
-    const queuedItems: Assessment[] = queue.map(q => ({
-      id: q.id,
-      created_at: new Date(parseInt(q.id)).toISOString(),
-      result: q.result,
-      confidence: q.confidence,
-      image_url: q.image_data, // Use base64 directly for preview
-      variety: q.variety,
-      is_offline: true
-    }));
+    // 2. Background Cloud Sync (if online)
+    if (navigator.onLine) {
+      try {
+        const { data, error } = await supabase
+          .from('scans')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-    setHistory([...queuedItems, ...(cloudData || [])] as Assessment[]);
+        if (error) throw error;
+        cloudData = data || [];
+
+        const queue = getSyncQueue();
+        const queuedItems: Assessment[] = queue.map(q => ({
+          id: q.id,
+          created_at: new Date(parseInt(q.id)).toISOString(),
+          result: q.result,
+          confidence: q.confidence,
+          image_url: q.image_data,
+          variety: q.variety,
+          model_used: q.model_used,
+          is_offline: true
+        }));
+        setHistory([...queuedItems, ...cloudData] as Assessment[]);
+
+        if (cloudData.length > 0) {
+          const top15 = cloudData.slice(0, 15);
+          localStorage.setItem('duriancare_cached_history', JSON.stringify(top15));
+          
+          (async () => {
+            try {
+              const base64Items = await Promise.all(top15.map(async (item) => {
+                if (typeof item.image_url === 'string' && item.image_url.startsWith('http')) {
+                  try {
+                    const imgRes = await fetch(item.image_url);
+                    const blob = await imgRes.blob();
+                    const base64 = await new Promise<string>((resolve) => {
+                      const reader = new FileReader();
+                      reader.onloadend = () => resolve(reader.result as string);
+                      reader.readAsDataURL(blob);
+                    });
+                    return { ...item, image_url: base64 };
+                  } catch (e) { return item; }
+                }
+                return item;
+              }));
+              localStorage.setItem('duriancare_cached_history', JSON.stringify(base64Items));
+            } catch (err) {}
+          })();
+        }
+      } catch (err) {}
+    }
   };
 
   const handleSync = async () => {
@@ -301,7 +352,15 @@ export default function HistoryPage() {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-bold">
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                    {item.model_used && (
+                      <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm bg-slate-100 text-slate-500 border border-slate-200">
+                        <Cpu size={10} className="inline mr-1 -mt-0.5" />
+                        {item.model_used}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-bold mt-1">
                     <Calendar size={12} /> {new Date(item.created_at).toLocaleDateString()} • {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
@@ -372,7 +431,7 @@ export default function HistoryPage() {
                     <Target className="text-emerald-500" size={18} />
                     <div>
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Classification</p>
-                      <p className="text-xs font-bold text-slate-700">CNN-ViT Hybrid</p>
+                      <p className="text-xs font-bold text-slate-700">{selectedEntry.model_used || "CNN-ViT Hybrid"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">

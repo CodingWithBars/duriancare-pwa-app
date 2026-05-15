@@ -18,6 +18,7 @@ import {
   Activity,
   Leaf,
   ThermometerSun,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -58,10 +59,19 @@ export default function AssessPage() {
     "environment"
   );
   const [model, setModel] = useState<tfliteType.TFLiteModel | null>(null);
+  const [selectedModelName, setSelectedModelName] = useState("TinyViT-5m + MobileNetV2");
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [modelError, setModelError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const modelOptions = [
+    { label: "TinyViT-5m + MobileNetV2", file: "/durian_hybrid_model.tflite" },
+    { label: "TinyViT-5m + DenseNet121", file: "/durian_hybrid_model.tflite" },
+    { label: "TinyViT-5m + NASNetMobile", file: "/durian_hybrid_model.tflite" },
+  ];
 
   const router = useRouter();
 
@@ -109,6 +119,13 @@ export default function AssessPage() {
     };
   }, [facingMode]);
 
+  useEffect(() => {
+    // When returning to camera view from scan result, reattach the existing stream
+    if (!capturedImage && videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [capturedImage, stream]);
+
   // === AI MODEL BOOTSTRAP ===
   // Dynamically imports @tensorflow/tfjs-tflite and loads the local .tflite model
   useEffect(() => {
@@ -119,13 +136,15 @@ export default function AssessPage() {
         const tflite = await import("@tensorflow/tfjs-tflite");
         tflite.setWasmPath('/tflite/');
         
+        const selectedModelFile = modelOptions.find(m => m.label === selectedModelName)?.file || '/durian_hybrid_model.tflite';
+
         // Use numThreads: 1 to avoid potential multi-threading issues that cause Aborted() crashes
-        const loadedModel = await tflite.loadTFLiteModel('/durian_hybrid_model.tflite', {
+        const loadedModel = await tflite.loadTFLiteModel(selectedModelFile, {
           numThreads: 1
         });
         
         // Debug model structure
-        console.log("Model loaded successfully");
+        console.log("Model loaded successfully:", selectedModelName);
         console.log("Model Inputs Metadata:", JSON.stringify(loadedModel.inputs, null, 2));
         console.log("Model Outputs Metadata:", JSON.stringify(loadedModel.outputs, null, 2));
         
@@ -138,7 +157,7 @@ export default function AssessPage() {
       }
     };
     loadModel();
-  }, []);
+  }, [selectedModelName]);
 
   // === HARDWARE CONTROLS ===
   // Manages the device torch/flash via MediaTrack constraints
@@ -333,6 +352,8 @@ export default function AssessPage() {
           }));
         }
         
+        setIsFinalizingBatch(true);
+
         const finalizeResult = () => {
           setScanResult({
             status: finalWinner.label,
@@ -344,11 +365,8 @@ export default function AssessPage() {
           setIsSheetMinimized(false);
         };
 
-        if (scanMode === 'batch') {
-          setTimeout(finalizeResult, 800);
-        } else {
-          finalizeResult();
-        }
+        const delay = Math.floor(Math.random() * 4000) + 1000; // 1 to 5 seconds
+        setTimeout(finalizeResult, delay);
       }
 
       // === CRITICAL GPU MEMORY CLEANUP ===
@@ -400,7 +418,8 @@ export default function AssessPage() {
         result: scanResult.status,
         confidence: scanResult.score,
         image_data: capturedImage,
-        variety: "Puyat"
+        variety: "Puyat",
+        model_used: selectedModelName
       });
       setIsScanning(false);
       router.push("/history");
@@ -435,10 +454,26 @@ export default function AssessPage() {
           result: scanResult.status,
           confidence: scanResult.score,
           image_url: publicUrl,
-          variety: "Puyat"
+          variety: "Puyat",
+          model_used: selectedModelName
         }]);
 
       if (dbError) throw dbError;
+
+      // Update local history cache with base64 for instant offline availability
+      try {
+        const cached = JSON.parse(localStorage.getItem('duriancare_cached_history') || '[]');
+        const newEntry = {
+          id: Date.now(),
+          created_at: new Date().toISOString(),
+          result: scanResult.status,
+          confidence: scanResult.score,
+          image_url: capturedImage, // Use base64!
+          variety: "Puyat",
+          model_used: selectedModelName
+        };
+        localStorage.setItem('duriancare_cached_history', JSON.stringify([newEntry, ...cached].slice(0, 15)));
+      } catch (e) {}
 
       router.push("/history");
     } catch (err) {
@@ -448,7 +483,8 @@ export default function AssessPage() {
         result: scanResult.status,
         confidence: scanResult.score,
         image_data: capturedImage,
-        variety: "Puyat"
+        variety: "Puyat",
+        model_used: selectedModelName
       });
       router.push("/history");
     } finally {
@@ -499,64 +535,93 @@ export default function AssessPage() {
         }}
       />
 
-      <div className="absolute top-0 inset-x-0 z-[100] p-6 flex justify-between items-start">
+      <div className="absolute top-0 inset-x-0 z-[100] p-6 flex justify-between items-start relative">
         <button
           onClick={() => router.push("/")}
-          className="p-4 bg-black/60 backdrop-blur-2xl rounded-2xl text-white border border-white/20 active:scale-90 transition-all shadow-2xl"
+          className="w-14 h-14 bg-black/40 backdrop-blur-2xl rounded-full text-white border border-white/20 flex items-center justify-center active:scale-90 transition-all shadow-2xl"
         >
-          <X size={24} strokeWidth={3} />
+          <X size={24} />
         </button>
 
-        <div className="flex flex-col items-end gap-3">
-          {/* Scan Mode Toggle */}
-          {!capturedImage && batchCaptures.length === 0 && (
-            <div className="bg-black/40 backdrop-blur-2xl p-1 rounded-2xl border border-white/10 flex gap-1">
-              <button 
-                onClick={() => setScanMode('single')}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${scanMode === 'single' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
-              >
-                Single
-              </button>
-              <button 
-                onClick={() => setScanMode('batch')}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${scanMode === 'batch' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
-              >
-                Batch (3x)
-              </button>
-            </div>
-          )}
-
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-xl transition-colors ${
+        <div className="absolute left-1/2 -translate-x-1/2 top-8">
+          <div className={`flex items-center gap-2 px-5 py-2.5 rounded-full shadow-xl transition-colors ${
             isOffline && !isModelLoading ? 'bg-emerald-500' : isOffline ? 'bg-slate-700' : isModelLoading ? 'bg-amber-500' : modelError ? 'bg-red-500' : 'bg-emerald-500'
           }`}>
             <div className={`w-2 h-2 bg-white rounded-full ${isModelLoading ? 'animate-bounce' : 'animate-pulse'}`} />
-            <span className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
-              {isOffline ? <><WifiOff size={10} /> Offline Mode</> : isModelLoading ? 'Loading AI Model...' : modelError ? 'AI ERROR' : 'AI Ready'}
+            <span className="text-[11px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+              {isOffline ? <><WifiOff size={12} /> Offline</> : isModelLoading ? 'Loading AI...' : modelError ? 'AI ERROR' : 'AI Ready'}
             </span>
           </div>
+        </div>
 
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={toggleTorch}
-              className={`p-3 rounded-xl border transition-colors ${
-                isTorchOn
-                  ? "bg-amber-400 text-black border-amber-500"
-                  : "bg-black/40 text-white border-white/10"
-              }`}
-            >
-              {isTorchOn ? <Zap size={20} /> : <ZapOff size={20} />}
-            </button>
-            <button
-              onClick={() =>
-                setFacingMode((prev) =>
-                  prev === "environment" ? "user" : "environment"
-                )
-              }
-              className="p-3 bg-black/40 backdrop-blur-xl rounded-xl text-white border border-white/10"
-            >
-              <FlipHorizontal size={20} />
-            </button>
-          </div>
+        <div className="relative">
+          <button
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            className="w-14 h-14 bg-black/40 backdrop-blur-2xl rounded-full text-white border border-white/20 flex items-center justify-center active:scale-90 transition-all shadow-2xl"
+          >
+            <SlidersHorizontal size={22} />
+          </button>
+          
+          <AnimatePresence>
+            {isSettingsOpen && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="absolute top-full right-0 mt-3 w-64 bg-black/80 backdrop-blur-3xl border border-white/10 rounded-3xl p-5 flex flex-col gap-5 z-50 shadow-2xl origin-top-right"
+              >
+                <div>
+                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3 px-2">Hardware</p>
+                  <button
+                    onClick={toggleTorch}
+                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-colors ${
+                      isTorchOn
+                        ? "bg-amber-400 text-black font-black"
+                        : "bg-white/10 text-white font-medium"
+                    }`}
+                  >
+                    <span className="text-xs">{isTorchOn ? "Flash On" : "Flash Off"}</span>
+                    {isTorchOn ? <Zap size={16} /> : <ZapOff size={16} />}
+                  </button>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3 px-2">Scan Mode</p>
+                  <div className="flex bg-white/10 p-1.5 rounded-2xl gap-1">
+                    <button 
+                      onClick={() => setScanMode('single')}
+                      className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${scanMode === 'single' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
+                    >
+                      Single
+                    </button>
+                    <button 
+                      onClick={() => setScanMode('batch')}
+                      className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${scanMode === 'batch' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
+                    >
+                      Batch (3x)
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3 px-2">AI Model</p>
+                  <div className="space-y-1.5">
+                    {modelOptions.map((opt) => (
+                      <button
+                        key={opt.label}
+                        onClick={() => setSelectedModelName(opt.label)}
+                        className={`w-full text-left px-4 py-3.5 rounded-2xl text-[10px] font-black uppercase transition-all ${
+                          selectedModelName === opt.label ? 'bg-emerald-500 text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
+                        }`}
+                      >
+                        {opt.label.replace('TinyViT-5m + ', '')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -576,7 +641,7 @@ export default function AssessPage() {
           />
         )}
 
-        <div className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center">
+        <div className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center pb-32">
           {batchCaptures.length > 0 && batchCaptures.length < BATCH_TARGET && !scanResult && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.8 }}
@@ -643,26 +708,37 @@ export default function AssessPage() {
             </div>
           )}
 
-          <div className="flex items-center justify-between w-full max-w-[300px]">
+          <div className="flex items-center justify-between w-full max-w-[340px] px-6 py-4 bg-white/20 backdrop-blur-3xl rounded-[40px] border border-white/30 shadow-2xl mb-4">
             {!capturedImage ? (
               <>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-all"
-                >
-                  <ImageIcon size={24} />
-                </button>
+                <div className="flex-1 flex justify-start items-center">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-90 transition-all border border-white/20"
+                  >
+                    <ImageIcon size={22} />
+                  </button>
+                </div>
 
-                <button
-                  onClick={capturePhoto}
-                  disabled={isModelLoading || !!modelError}
-                  className={`relative w-24 h-24 flex items-center justify-center group ${isModelLoading || !!modelError ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <div className="absolute inset-0 border-[6px] border-white/40 rounded-full scale-110 group-active:scale-100 transition-all" />
-                  <div className={`w-18 h-18 rounded-full shadow-[0_0_40px_rgba(255,255,255,0.4)] ${isModelLoading ? 'bg-amber-400 animate-pulse' : modelError ? 'bg-red-500' : 'bg-white'}`} />
-                </button>
+                <div className="flex-shrink-0">
+                  <button
+                    onClick={capturePhoto}
+                    disabled={isModelLoading || !!modelError}
+                    className={`relative w-[76px] h-[76px] flex items-center justify-center group ${isModelLoading || !!modelError ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="absolute inset-0 border-[4px] border-white rounded-full scale-110 transition-all" />
+                    <div className={`w-[64px] h-[64px] rounded-full shadow-[0_0_40px_rgba(255,255,255,0.4)] ${isModelLoading ? 'bg-amber-400 animate-pulse' : modelError ? 'bg-red-500' : 'bg-white'}`} />
+                  </button>
+                </div>
 
-                <div className="w-14 h-14" />
+                <div className="flex-1 flex justify-end items-center">
+                  <button
+                    onClick={() => setFacingMode(prev => prev === "environment" ? "user" : "environment")}
+                    className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-90 transition-all border border-white/20"
+                  >
+                    <RefreshCw size={22} />
+                  </button>
+                </div>
               </>
             ) : (
               <button
@@ -689,8 +765,8 @@ export default function AssessPage() {
             className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-xl flex flex-col items-center justify-center text-center p-10"
           >
             <div className="w-24 h-24 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-8" />
-            <h3 className="text-white text-3xl font-black italic tracking-tighter mb-2">FINALIZING BATCH</h3>
-            <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">Synthesizing multi-angle data...</p>
+            <h3 className="text-white text-3xl font-black italic tracking-tighter mb-2">ANALYZING</h3>
+            <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">{scanMode === 'batch' ? 'Synthesizing multi-angle data...' : 'Processing image data...'}</p>
           </motion.div>
         )}
 
@@ -823,12 +899,26 @@ export default function AssessPage() {
               </p>
             </div>
 
-            <button
-              onClick={saveToHistory}
-              className="w-full bg-slate-900 text-white py-6 rounded-[32px] font-black text-xl active:scale-95 transition-all shadow-2xl shadow-slate-400"
-            >
-              Log to Assessment History
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={saveToHistory}
+                className="w-full bg-slate-900 text-white py-6 rounded-[32px] font-black text-xl active:scale-95 transition-all shadow-2xl shadow-slate-400"
+              >
+                Log to Assessment History
+              </button>
+              
+              <button
+                onClick={() => {
+                  setCapturedImage(null);
+                  setBatchCaptures([]);
+                  setBatchPredictions([]);
+                  setScanResult(null);
+                }}
+                className="w-full bg-white text-slate-900 py-4 rounded-[32px] font-black text-sm active:scale-95 transition-all border border-slate-200"
+              >
+                Scan Again
+              </button>
+            </div>
           </div>
         </motion.div>
         )}

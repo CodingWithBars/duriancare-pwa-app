@@ -31,29 +31,77 @@ export default function Home() {
     setShowOnboarding(!hasOnboarded);
 
     const loadData = async () => {
-      // 1. Cloud Data
-      const { data: cloudData, error } = await supabase
-        .from('scans')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error("Failed to fetch history from Supabase", error);
+      let cloudData = [];
+      
+      // 1. Immediate Cache Load (Cache-First)
+      const cached = localStorage.getItem('duriancare_cached_history');
+      if (cached) {
+        try {
+          cloudData = JSON.parse(cached);
+          const queue = getSyncQueue();
+          const queuedItems: Assessment[] = queue.map(q => ({
+            id: q.id,
+            created_at: new Date(parseInt(q.id)).toISOString(),
+            result: q.result,
+            confidence: q.confidence,
+            image_url: q.image_data,
+            variety: q.variety,
+            is_offline: true
+          }));
+          setHistory([...queuedItems, ...cloudData] as Assessment[]);
+        } catch(e) {}
       }
 
-      // 2. Offline Data
-      const queue = getSyncQueue();
-      const queuedItems: Assessment[] = queue.map(q => ({
-        id: q.id,
-        created_at: new Date(parseInt(q.id)).toISOString(),
-        result: q.result,
-        confidence: q.confidence,
-        image_url: q.image_data,
-        variety: q.variety,
-        is_offline: true
-      }));
+      // 2. Background Cloud Sync (if online)
+      if (navigator.onLine) {
+        try {
+          const { data, error } = await supabase
+            .from('scans')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-      setHistory([...queuedItems, ...(cloudData || [])] as Assessment[]);
+          if (error) throw error;
+          cloudData = data || [];
+
+          const queue = getSyncQueue();
+          const queuedItems: Assessment[] = queue.map(q => ({
+            id: q.id,
+            created_at: new Date(parseInt(q.id)).toISOString(),
+            result: q.result,
+            confidence: q.confidence,
+            image_url: q.image_data,
+            variety: q.variety,
+            is_offline: true
+          }));
+          setHistory([...queuedItems, ...cloudData] as Assessment[]);
+
+          if (cloudData.length > 0) {
+            const top15 = cloudData.slice(0, 15);
+            localStorage.setItem('duriancare_cached_history', JSON.stringify(top15));
+            
+            (async () => {
+              try {
+                const base64Items = await Promise.all(top15.map(async (item) => {
+                  if (typeof item.image_url === 'string' && item.image_url.startsWith('http')) {
+                    try {
+                      const imgRes = await fetch(item.image_url);
+                      const blob = await imgRes.blob();
+                      const base64 = await new Promise<string>((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result as string);
+                        reader.readAsDataURL(blob);
+                      });
+                      return { ...item, image_url: base64 };
+                    } catch (e) { return item; }
+                  }
+                  return item;
+                }));
+                localStorage.setItem('duriancare_cached_history', JSON.stringify(base64Items));
+              } catch (err) {}
+            })();
+          }
+        } catch (err) {}
+      }
     };
 
     loadData();
