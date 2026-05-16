@@ -74,7 +74,7 @@ export default function AssessPage() {
   const modelOptions = [
     { label: "TinyViT-5m + MobileNetV2", file: `${HF_REPO_URL}/durian_mobilenetv2_tinyvit.tflite` },
     { label: "TinyViT-5m + DenseNet121", file: `${HF_REPO_URL}/durian_densenet121_tinyvit_test2.tflite` },
-    { label: "TinyViT-5m + NASNetMobile", file: `${HF_REPO_URL}/durian_nasnetmobile_tinyvit_test1.tflite` },
+    { label: "TinyViT-5m + NASNetMobile", file: `${HF_REPO_URL}/durian_nasnetmobile_tinyvit_test5.tflite` },
   ];
 
   const router = useRouter();
