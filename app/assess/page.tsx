@@ -134,7 +134,11 @@ export default function AssessPage() {
       setModelError(null);
       try {
         const tflite = await import("@tensorflow/tfjs-tflite");
-        tflite.setWasmPath('/tflite/');
+        
+        // Use fully qualified URL to ensure WASM files are found on production/PWA environments
+        const wasmPath = `${window.location.origin}/tflite/`;
+        console.log("Setting TFLite WASM Path:", wasmPath);
+        tflite.setWasmPath(wasmPath);
         
         const selectedModelFile = modelOptions.find(m => m.label === selectedModelName)?.file || '/durian_hybrid_model.tflite';
 
@@ -175,7 +179,22 @@ export default function AssessPage() {
         setIsModelLoading(false);
       } catch (err) {
         console.error("Error loading TFLite model:", err);
-        setModelError("Failed to initialize AI engine");
+        
+        // HELP DIAGNOSE PRODUCTION DEPLOYMENT ISSUES (Git LFS)
+        try {
+          const selectedModelFile = modelOptions.find(m => m.label === selectedModelName)?.file || '/durian_hybrid_model.tflite';
+          const response = await fetch(selectedModelFile);
+          const text = await response.text();
+          if (text.includes("version https://git-lfs.github.com/spec/v1")) {
+            console.error("CRITICAL: Git LFS Pointer Detected! Vercel did not fetch the actual model binary.");
+            setModelError("Server Error: Large AI models were not correctly deployed (LFS error).");
+          } else {
+            setModelError("Failed to initialize AI engine. Please refresh and try again.");
+          }
+        } catch (diagErr) {
+          setModelError("Error loading AI model. Please check your connection.");
+        }
+        
         setIsModelLoading(false);
       }
     };
