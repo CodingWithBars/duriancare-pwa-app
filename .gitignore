@@ -41,6 +41,5 @@ public/workbox-*.js
 public/sw.js
 public/swe-worker-*.js
 
-# AI models (Hosted on Supabase / CDN)
+# AI models (Hosted on Hugging Face)
 *.tflite
-public/tflite/

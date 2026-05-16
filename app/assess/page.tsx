@@ -67,14 +67,14 @@ export default function AssessPage() {
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Since Supabase Free has a 50MB limit and Vercel LFS can be tricky,
-  // we use GitHub Releases to host the 70MB+ model files.
-  const GITHUB_RELEASE_URL = "https://github.com/CodingWithBars/duriancare-pwa-app/releases/download/v1.0.0";
+  // Models are hosted on Hugging Face (supports CORS and > 50MB files)
+  // ⚠️ NOTE: If your Hugging Face username is different, please update this URL.
+  const HF_REPO_URL = "https://huggingface.co/CodingWithBars/durian-care-pwa/resolve/main";
 
   const modelOptions = [
-    { label: "TinyViT-5m + MobileNetV2", file: `${GITHUB_RELEASE_URL}/durian_mobilenetv2_tinyvit.tflite` },
-    { label: "TinyViT-5m + DenseNet121", file: `${GITHUB_RELEASE_URL}/durian_densenet121_tinyvit_test2.tflite` },
-    { label: "TinyViT-5m + NASNetMobile", file: `${GITHUB_RELEASE_URL}/durian_nasnetmobile_tinyvit_test1.tflite` },
+    { label: "TinyViT-5m + MobileNetV2", file: `${HF_REPO_URL}/durian_mobilenetv2_tinyvit.tflite` },
+    { label: "TinyViT-5m + DenseNet121", file: `${HF_REPO_URL}/durian_densenet121_tinyvit_test2.tflite` },
+    { label: "TinyViT-5m + NASNetMobile", file: `${HF_REPO_URL}/durian_nasnetmobile_tinyvit_test1.tflite` },
   ];
 
   const router = useRouter();
@@ -139,9 +139,9 @@ export default function AssessPage() {
       try {
         const tflite = await import("@tensorflow/tfjs-tflite");
         
-        // Use official CDN to avoid 404s on production/PWA environments
-        const wasmPath = "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/";
-        console.log("Setting TFLite WASM Path (CDN):", wasmPath);
+        // Use local assets now that they are tracked in Git again
+        const wasmPath = '/tflite/';
+        console.log("Setting TFLite WASM Path (Local):", wasmPath);
         tflite.setWasmPath(wasmPath);
         
         const selectedModelFile = modelOptions.find(m => m.label === selectedModelName)?.file || '/durian_hybrid_model.tflite';
