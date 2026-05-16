@@ -17,18 +17,21 @@
     event.respondWith(
       caches.open("ai-models-cache-v1").then((cache) => {
         return cache.match(event.request).then((cachedResponse) => {
-          // If it's in the cache, serve it immediately (Offline Mode)
-          if (cachedResponse) return cachedResponse;
+          if (cachedResponse) {
+            console.log("Serving AI asset from cache:", url);
+            return cachedResponse;
+          }
 
-          // If not, fetch from network and then cache it for next time
-          return fetch(event.request).then((networkResponse) => {
+          // Force 'cors' mode to ensure we get a cacheable response from Hugging Face
+          return fetch(event.request, { mode: 'cors' }).then((networkResponse) => {
             if (networkResponse.ok) {
               cache.put(event.request, networkResponse.clone());
+              console.log("Successfully cached AI asset:", url);
             }
             return networkResponse;
-          }).catch(() => {
-            // Fallback if network fails and nothing is in cache
-            return new Response("AI Model not available offline yet. Please load it once while online.", { status: 503 });
+          }).catch((err) => {
+            console.error("Offline and asset not in cache:", url);
+            return new Response("Offline: AI model not yet cached.", { status: 503 });
           });
         });
       })
