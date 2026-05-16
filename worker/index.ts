@@ -11,4 +11,5 @@
   if (url.endsWith(".wasm") || url.endsWith(".tflite") || url.includes("/tflite/")) {
     event.respondWith(fetch(event.request));
   }
+  
 });
