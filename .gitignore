@@ -34,3 +34,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AI model binaries (too large for Git, 60-75MB each)
+*.tflite
+
+# generated PWA worker files
+public/worker-*.js
+public/workbox-*.js
+public/sw.js
+public/swe-worker-*.js
