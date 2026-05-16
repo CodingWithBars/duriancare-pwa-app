@@ -66,6 +66,7 @@ export default function AssessPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Models are hosted on Hugging Face (supports CORS and > 50MB files)
   // ⚠️ NOTE: If your Hugging Face username is different, please update this URL.
@@ -107,6 +108,12 @@ export default function AssessPage() {
   useEffect(() => {
     setIsMounted(true);
     startCamera();
+    // Show onboarding popup once per browser session
+    const seen = sessionStorage.getItem('dc_onboarding_seen');
+    if (!seen) {
+      setShowOnboarding(true);
+      sessionStorage.setItem('dc_onboarding_seen', '1');
+    }
     
     if (typeof navigator !== 'undefined') {
       setIsOffline(!navigator.onLine);
@@ -546,6 +553,120 @@ export default function AssessPage() {
 
   return (
     <div className="fixed inset-0 h-[100dvh] w-full bg-black overflow-hidden flex flex-col select-none z-[9999]">
+
+      {/* ── ONBOARDING POPUP ── */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-xl flex items-end justify-center p-4 pb-8"
+          >
+            <motion.div
+              initial={{ y: 80, opacity: 0, scale: 0.96 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 80, opacity: 0, scale: 0.96 }}
+              transition={{ type: 'spring', damping: 22, stiffness: 260 }}
+              className="w-full max-w-sm bg-[#0f1117] rounded-[32px] p-6 text-white shadow-2xl border border-white/10 relative overflow-hidden"
+            >
+              {/* Glow accent */}
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Header */}
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                    <Cpu size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="font-black text-sm tracking-tight">DurianCare AI Scanner</p>
+                    <p className="text-[10px] text-slate-400 font-medium">Quick-start guide</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowOnboarding(false)}
+                  className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white/60 active:scale-90 transition-all"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                {/* Offline Mode */}
+                <div className="flex gap-3 items-start bg-white/5 rounded-2xl p-3.5 border border-white/8">
+                  <div className="w-8 h-8 bg-amber-500/20 rounded-xl flex items-center justify-center shrink-0">
+                    <WifiOff size={14} className="text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-bold text-white mb-0.5">Offline Mode</p>
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      AI inference runs fully on-device. Scans taken offline are queued and synced to the cloud when you reconnect.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Model Preloading */}
+                <div className="flex gap-3 items-start bg-white/5 rounded-2xl p-3.5 border border-white/8">
+                  <div className="w-8 h-8 bg-blue-500/20 rounded-xl flex items-center justify-center shrink-0">
+                    <Cpu size={14} className="text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-bold text-white mb-0.5">Loading AI Models</p>
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      Models are fetched from Hugging Face on first use (~60–75 MB each). Once loaded, switching between the 3 best-performing models is instant.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3 Models */}
+                <div className="flex gap-3 items-start bg-white/5 rounded-2xl p-3.5 border border-white/8">
+                  <div className="w-8 h-8 bg-emerald-500/20 rounded-xl flex items-center justify-center shrink-0">
+                    <Activity size={14} className="text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-bold text-white mb-1">3 Available Models</p>
+                    <div className="space-y-1">
+                      {[
+                        { name: 'MobileNetV2', tag: 'Fastest', color: 'bg-emerald-500/30 text-emerald-300' },
+                        { name: 'DenseNet121', tag: 'Most Accurate', color: 'bg-blue-500/30 text-blue-300' },
+                        { name: 'NASNetMobile', tag: 'Balanced', color: 'bg-violet-500/30 text-violet-300' },
+                      ].map(m => (
+                        <div key={m.name} className="flex items-center justify-between">
+                          <p className="text-[10px] text-slate-300 font-medium">{m.name}</p>
+                          <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${m.color}`}>{m.tag}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1.5">Switch models via the <span className="text-white font-bold">⊟ Settings</span> button (top-right).</p>
+                  </div>
+                </div>
+
+                {/* Scan Tips */}
+                <div className="flex gap-3 items-start bg-white/5 rounded-2xl p-3.5 border border-white/8">
+                  <div className="w-8 h-8 bg-rose-500/20 rounded-xl flex items-center justify-center shrink-0">
+                    <Leaf size={14} className="text-rose-400" />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-bold text-white mb-0.5">Scan Tips</p>
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      Use <span className="text-white font-bold">Batch Mode (3×)</span> for highest accuracy — position the durian inside the green bounding box from 3 angles.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowOnboarding(false)}
+                className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 active:scale-95 transition-all rounded-2xl font-black text-sm text-white shadow-lg shadow-emerald-500/30 tracking-wide"
+              >
+                Got it — Start Scanning
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Hidden Tools */}
       <canvas ref={canvasRef} className="hidden" />
       <input
