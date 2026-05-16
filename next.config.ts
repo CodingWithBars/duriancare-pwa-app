@@ -21,10 +21,10 @@ const withPWA = withPWAInit({
   // publicExcludes uses minimatch globs - these patterns tell the plugin
   // to skip these files when scanning the public/ directory for the manifest
   publicExcludes: [
-    "!tflite/**/*",
-    "!*.tflite",
-    "!fusion_model_float32.tflite",
-    "!durian_*.tflite",
+    "tflite/**/*",
+    "*.tflite",
+    "fusion_model_float32.tflite",
+    "durian_*.tflite",
   ],
 });
 

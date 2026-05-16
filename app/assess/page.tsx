@@ -150,13 +150,20 @@ export default function AssessPage() {
         }
         
         // === WASM WARM-UP ===
-        // TFLite WASM returns all zeros on the first inference after loading.
-        // Running a dummy prediction "primes" the internal buffers so real scans work immediately.
-        const tf = await import("@tensorflow/tfjs-core");
-        const dummyInput = tf.zeros([1, 224, 224, 3], 'float32');
-        const warmupOutput = loadedModel.predict(dummyInput);
-        tf.dispose([dummyInput, warmupOutput]);
-        console.log("WASM engine warm-up complete.");
+        // TFLite WASM often returns all zeros on the first few inferences after loading.
+        // Running multiple dummy predictions with random data "primes" the internal buffers.
+        const dummyInput = tf.randomNormal([1, 224, 224, 3]);
+        try {
+          for (let i = 0; i < 3; i++) {
+            const warmupOutput = loadedModel.predict(dummyInput);
+            tf.dispose(warmupOutput);
+          }
+          console.log("WASM engine warm-up (3 runs) complete.");
+        } catch (warmupErr) {
+          console.warn("Warm-up inference failed, but proceeding anyway:", warmupErr);
+        } finally {
+          tf.dispose(dummyInput);
+        }
 
         setModel(loadedModel);
         
@@ -165,7 +172,6 @@ export default function AssessPage() {
         console.log("Model Inputs Metadata:", JSON.stringify(loadedModel.inputs, null, 2));
         console.log("Model Outputs Metadata:", JSON.stringify(loadedModel.outputs, null, 2));
         
-        setModel(loadedModel);
         setIsModelLoading(false);
       } catch (err) {
         console.error("Error loading TFLite model:", err);
