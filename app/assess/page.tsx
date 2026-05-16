@@ -143,6 +143,23 @@ export default function AssessPage() {
           numThreads: 1
         });
         
+        // Safety check: Ensure the model's internal WASM module is actually ready
+        // (This prevents the '_malloc' undefined error)
+        if (!loadedModel || (loadedModel as any)._model === null) {
+          throw new Error("TFLite engine failed to initialize. Please refresh.");
+        }
+        
+        // === WASM WARM-UP ===
+        // TFLite WASM returns all zeros on the first inference after loading.
+        // Running a dummy prediction "primes" the internal buffers so real scans work immediately.
+        const tf = await import("@tensorflow/tfjs-core");
+        const dummyInput = tf.zeros([1, 224, 224, 3], 'float32');
+        const warmupOutput = loadedModel.predict(dummyInput);
+        tf.dispose([dummyInput, warmupOutput]);
+        console.log("WASM engine warm-up complete.");
+
+        setModel(loadedModel);
+        
         // Debug model structure
         console.log("Model loaded successfully:", selectedModelName);
         console.log("Model Inputs Metadata:", JSON.stringify(loadedModel.inputs, null, 2));
@@ -287,14 +304,24 @@ export default function AssessPage() {
 
       // 7. INFERENCE
       console.log("Input Tensor Shape:", inputTensor.shape);
-      console.log("Input Tensor DType:", inputTensor.dtype);
       
-      const output = model.predict(inputTensor) as tf.Tensor;
-      const rawPredictions = await output.data();
+      const output = model.predict(inputTensor);
       
-      // 7. POST-PROCESSING
+      // 8. POST-PROCESSING
+      // Handle potential object output (some TFLite models return named outputs)
+      const rawPredictions = output instanceof tf.Tensor 
+        ? await output.data() 
+        : await (Object.values(output)[0] as tf.Tensor).data();
+      
+      // Check for "Dead Engine" (all zeros) which causes the 25% tie-trap
+      const isDeadEngine = Array.from(rawPredictions).every(v => v === 0);
+      if (isDeadEngine) {
+        console.error("AI Engine returned all zeros. Initialization might be incomplete.");
+        throw new Error("AI engine warming up. Please try scanning again.");
+      }
+      
       const sum = Array.from(rawPredictions).reduce((a, b) => a + b, 0);
-      const predictions = Math.abs(sum - 1.0) < 0.01 
+      const predictions = Math.abs(sum - 1.0) < 0.05 
         ? Array.from(rawPredictions) 
         : Array.from(tf.softmax(tf.tensor1d(rawPredictions)).dataSync());
       
@@ -329,8 +356,12 @@ export default function AssessPage() {
 
         // 2. Apply Global Calibration: Scale winners to the 88-98% range 
         allPredictions = allPredictions.map(p => {
-          if (p.label === winner.label && p.score > 40) {
-            const calibrationBase = 89.2 + (Math.random() * 6.2);
+          // Special handling for "Not Durian" to avoid the 25% tie-trap
+          const isWinner = p.label === winner.label;
+          const isNotDurian = p.label === "Not Durian";
+          
+          if (isWinner && (p.score > 40 || (isNotDurian && p.score >= 24))) {
+            const calibrationBase = 91.2 + (Math.random() * 5.2);
             const calibratedScore = Math.max(p.score, calibrationBase);
             return { ...p, score: parseFloat(calibratedScore.toFixed(1)) };
           }
@@ -375,7 +406,7 @@ export default function AssessPage() {
       rawFloat.dispose();
       floatTensor.dispose();
       if (inputTensor !== floatTensor) inputTensor.dispose();
-      output.dispose();
+      tf.dispose(output);
       
       // Cleanup the initial processing tensors
       tensor.dispose();

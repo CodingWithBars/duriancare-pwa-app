@@ -1,0 +1,1 @@
+self.addEventListener("fetch",e=>{let t=e.request.url;(t.endsWith(".wasm")||t.endsWith(".tflite")||t.includes("/tflite/"))&&e.respondWith(fetch(e.request))});

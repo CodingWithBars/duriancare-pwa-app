@@ -1,33 +1,35 @@
 import type { NextConfig } from "next";
 import withPWAInit from "@ducanh2912/next-pwa";
 
-const CopyPlugin = require("copy-webpack-plugin");
-
 const withPWA = withPWAInit({
   dest: "public",
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  cacheOnFrontEndNav: false,
+  aggressiveFrontEndNavCaching: false,
   reloadOnOnline: true,
   disable: false,
   workboxOptions: {
     disableDevLogs: true,
-    maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+    // This is the KEY fix: exclude matching entries from the precache manifest.
+    // Without this, all .tflite and /tflite/ files end up in sw.js precacheAndRoute()
+    // and cause "Cache.put() NetworkError" when the SW tries to store 350MB of AI binaries.
+    exclude: [
+      /\.tflite$/i,
+      /\/tflite\//i,
+      /\.wasm$/i,
+    ],
   },
-  publicExcludes: ["fusion_model_float32.tflite", "tflite/**"],
+  // publicExcludes uses minimatch globs - these patterns tell the plugin
+  // to skip these files when scanning the public/ directory for the manifest
+  publicExcludes: [
+    "!tflite/**/*",
+    "!*.tflite",
+    "!fusion_model_float32.tflite",
+    "!durian_*.tflite",
+  ],
 });
 
 const nextConfig: NextConfig = {
   webpack: (config) => {
-    config.plugins.push(
-      new CopyPlugin({
-        patterns: [
-          {
-            from: "node_modules/@tensorflow/tfjs-tflite/wasm",
-            to: "static/chunks", // This automatically resolves to .next/static/chunks/
-          },
-        ],
-      })
-    );
     return config;
   },
 };
