@@ -352,17 +352,16 @@ export default function HistoryPage() {
                       </span>
                     )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                    {item.model_used && (
-                      <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm bg-slate-100 text-slate-500 border border-slate-200">
-                        <Cpu size={10} className="inline mr-1 -mt-0.5" />
-                        {item.model_used}
-                      </span>
-                    )}
-                  </div>
                   <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-bold mt-1">
                     <Calendar size={12} /> {new Date(item.created_at).toLocaleDateString()} • {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <div className="w-1 h-1 bg-slate-200 rounded-full mx-1" />
+                    <span className="text-emerald-600 font-black">{item.confidence}% MATCH</span>
                   </div>
+                  {item.model_used && (
+                    <p className="text-[10px] font-bold text-slate-400 mt-1 italic">
+                      {item.model_used.replace('TinyViT-5m + ', '')}
+                    </p>
+                  )}
                 </div>
               </div>
             </motion.div>

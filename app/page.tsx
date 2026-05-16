@@ -18,6 +18,7 @@ interface Assessment {
   confidence: number;
   image_url: string;
   variety: string;
+  model_used?: string;
   is_offline?: boolean;
 }
 
@@ -46,6 +47,7 @@ export default function Home() {
             confidence: q.confidence,
             image_url: q.image_data,
             variety: q.variety,
+            model_used: q.model_used,
             is_offline: true
           }));
           setHistory([...queuedItems, ...cloudData] as Assessment[]);
@@ -71,6 +73,7 @@ export default function Home() {
             confidence: q.confidence,
             image_url: q.image_data,
             variety: q.variety,
+            model_used: q.model_used,
             is_offline: true
           }));
           setHistory([...queuedItems, ...cloudData] as Assessment[]);
@@ -237,6 +240,11 @@ export default function Home() {
                         <div className="w-1 h-1 bg-slate-200 rounded-full" />
                         <span className="text-[10px] font-black text-emerald-600 tracking-tight">{item.confidence}% MATCH</span>
                       </div>
+                      {item.model_used && (
+                        <p className="text-[9px] font-bold text-slate-400 mt-0.5 truncate italic">
+                          {item.model_used.replace('TinyViT-5m + ', '')}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <div className={`px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider ${
@@ -292,9 +300,9 @@ export default function Home() {
                   <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-sm">
                     <div className="flex items-center gap-2 mb-2 text-amber-400">
                       <Cpu size={16} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">AI Status</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">AI Model</span>
                     </div>
-                    <p className="text-lg font-black text-white uppercase">Hybrid</p>
+                    <p className="text-xs font-black text-white uppercase truncate">{selectedEntry.model_used?.replace('TinyViT-5m + ', '') || "Hybrid"}</p>
                   </div>
                 </div>
 

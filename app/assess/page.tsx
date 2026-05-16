@@ -68,9 +68,9 @@ export default function AssessPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const modelOptions = [
-    { label: "TinyViT-5m + MobileNetV2", file: "/durian_hybrid_model.tflite" },
-    { label: "TinyViT-5m + DenseNet121", file: "/durian_hybrid_model.tflite" },
-    { label: "TinyViT-5m + NASNetMobile", file: "/durian_hybrid_model.tflite" },
+    { label: "TinyViT-5m + MobileNetV2", file: "/durian_mobilenetv2_tinyvit.tflite" },
+    { label: "TinyViT-5m + DenseNet121", file: "/durian_densenet121_tinyvit_test2.tflite" },
+    { label: "TinyViT-5m + NASNetMobile", file: "/durian_nasnetmobile_tinyvit_test1.tflite" },
   ];
 
   const router = useRouter();
@@ -537,13 +537,22 @@ export default function AssessPage() {
 
       <div className="absolute top-0 inset-x-0 z-[100] p-6 flex justify-between items-start relative">
         <button
-          onClick={() => router.push("/")}
+          onClick={() => {
+            if (capturedImage) {
+              setCapturedImage(null);
+              setBatchCaptures([]);
+              setBatchPredictions([]);
+              setScanResult(null);
+            } else {
+              router.push("/");
+            }
+          }}
           className="w-14 h-14 bg-black/40 backdrop-blur-2xl rounded-full text-white border border-white/20 flex items-center justify-center active:scale-90 transition-all shadow-2xl"
         >
           <X size={24} />
         </button>
 
-        <div className="absolute left-1/2 -translate-x-1/2 top-8">
+        <div className="absolute left-1/2 -translate-x-1/2 top-8 flex flex-col items-center">
           <div className={`flex items-center gap-2 px-5 py-2.5 rounded-full shadow-xl transition-colors ${
             isOffline && !isModelLoading ? 'bg-emerald-500' : isOffline ? 'bg-slate-700' : isModelLoading ? 'bg-amber-500' : modelError ? 'bg-red-500' : 'bg-emerald-500'
           }`}>
@@ -552,6 +561,7 @@ export default function AssessPage() {
               {isOffline ? <><WifiOff size={12} /> Offline</> : isModelLoading ? 'Loading AI...' : modelError ? 'AI ERROR' : 'AI Ready'}
             </span>
           </div>
+          <span className="text-white text-[10px] font-bold mt-1 tracking-widest drop-shadow-md">{selectedModelName}</span>
         </div>
 
         <div className="relative">
@@ -609,7 +619,10 @@ export default function AssessPage() {
                     {modelOptions.map((opt) => (
                       <button
                         key={opt.label}
-                        onClick={() => setSelectedModelName(opt.label)}
+                        onClick={() => {
+                          setSelectedModelName(opt.label);
+                          setIsSettingsOpen(false);
+                        }}
                         className={`w-full text-left px-4 py-3.5 rounded-2xl text-[10px] font-black uppercase transition-all ${
                           selectedModelName === opt.label ? 'bg-emerald-500 text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
                         }`}
@@ -747,10 +760,11 @@ export default function AssessPage() {
                   setBatchCaptures([]);
                   setBatchPredictions([]);
                   setScanResult(null);
+                  setIsSheetMinimized(false);
                 }}
                 className="w-full bg-white/10 backdrop-blur-2xl py-5 rounded-3xl text-white font-black border border-white/20 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-2xl"
               >
-                <RefreshCw size={22} /> New Batch Scan
+                <X size={22} /> Close Scan
               </button>
             )}
           </div>
