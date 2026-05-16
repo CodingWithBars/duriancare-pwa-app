@@ -67,10 +67,14 @@ export default function AssessPage() {
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // Since Supabase Free has a 50MB limit and Vercel LFS can be tricky,
+  // we use GitHub Releases to host the 70MB+ model files.
+  const GITHUB_RELEASE_URL = "https://github.com/CodingWithBars/duriancare-pwa-app/releases/download/v1.0.0";
+
   const modelOptions = [
-    { label: "TinyViT-5m + MobileNetV2", file: "/durian_mobilenetv2_tinyvit.tflite" },
-    { label: "TinyViT-5m + DenseNet121", file: "/durian_densenet121_tinyvit_test2.tflite" },
-    { label: "TinyViT-5m + NASNetMobile", file: "/durian_nasnetmobile_tinyvit_test1.tflite" },
+    { label: "TinyViT-5m + MobileNetV2", file: `${GITHUB_RELEASE_URL}/durian_mobilenetv2_tinyvit.tflite` },
+    { label: "TinyViT-5m + DenseNet121", file: `${GITHUB_RELEASE_URL}/durian_densenet121_tinyvit_test2.tflite` },
+    { label: "TinyViT-5m + NASNetMobile", file: `${GITHUB_RELEASE_URL}/durian_nasnetmobile_tinyvit_test1.tflite` },
   ];
 
   const router = useRouter();
@@ -135,9 +139,9 @@ export default function AssessPage() {
       try {
         const tflite = await import("@tensorflow/tfjs-tflite");
         
-        // Use fully qualified URL to ensure WASM files are found on production/PWA environments
-        const wasmPath = `${window.location.origin}/tflite/`;
-        console.log("Setting TFLite WASM Path:", wasmPath);
+        // Use official CDN to avoid 404s on production/PWA environments
+        const wasmPath = "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/";
+        console.log("Setting TFLite WASM Path (CDN):", wasmPath);
         tflite.setWasmPath(wasmPath);
         
         const selectedModelFile = modelOptions.find(m => m.label === selectedModelName)?.file || '/durian_hybrid_model.tflite';
@@ -179,22 +183,7 @@ export default function AssessPage() {
         setIsModelLoading(false);
       } catch (err) {
         console.error("Error loading TFLite model:", err);
-        
-        // HELP DIAGNOSE PRODUCTION DEPLOYMENT ISSUES (Git LFS)
-        try {
-          const selectedModelFile = modelOptions.find(m => m.label === selectedModelName)?.file || '/durian_hybrid_model.tflite';
-          const response = await fetch(selectedModelFile);
-          const text = await response.text();
-          if (text.includes("version https://git-lfs.github.com/spec/v1")) {
-            console.error("CRITICAL: Git LFS Pointer Detected! Vercel did not fetch the actual model binary.");
-            setModelError("Server Error: Large AI models were not correctly deployed (LFS error).");
-          } else {
-            setModelError("Failed to initialize AI engine. Please refresh and try again.");
-          }
-        } catch (diagErr) {
-          setModelError("Error loading AI model. Please check your connection.");
-        }
-        
+        setModelError("Failed to initialize AI engine. Please ensure models are uploaded to Supabase.");
         setIsModelLoading(false);
       }
     };

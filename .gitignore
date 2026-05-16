@@ -40,3 +40,7 @@ public/worker-*.js
 public/workbox-*.js
 public/sw.js
 public/swe-worker-*.js
+
+# AI models (Hosted on Supabase / CDN)
+*.tflite
+public/tflite/
