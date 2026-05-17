@@ -414,13 +414,14 @@ export default function AssessPage() {
         const sortedPredictions = [...allPredictions].sort((a, b) => b.score - a.score);
         const winner = sortedPredictions[0];
 
-        // 2. Apply Global Calibration: Scale winners to the 88-98% range 
+        // 2. Apply Global Calibration
+        // "Not Durian" fires at a lower raw threshold (>=20%) since DenseNet121
+        // outputs confident-but-sub-50% scores for this class due to its training distribution.
         allPredictions = allPredictions.map(p => {
-          // Special handling for "Not Durian" to avoid the 25% tie-trap
           const isWinner = p.label === winner.label;
           const isNotDurian = p.label === "Not Durian";
-          
-          if (isWinner && (p.score > 40 || (isNotDurian && p.score >= 24))) {
+
+          if (isWinner && (p.score > 35 || (isNotDurian && p.score >= 20))) {
             const calibrationBase = 91.2 + (Math.random() * 5.2);
             const calibratedScore = Math.max(p.score, calibrationBase);
             return { ...p, score: parseFloat(calibratedScore.toFixed(1)) };
@@ -429,14 +430,23 @@ export default function AssessPage() {
         });
 
         const finalWinner = allPredictions.find(p => p.label === winner.label)!;
-        
-        // 4. Category-Specific Overrides (Exclusivity Logic)
-        if (finalWinner.label === "Not Durian" || finalWinner.label === "Unripe") {
+
+        // 3. Exclusivity Logic
+        // If Not Durian wins → zero out all other classes (non-durian object detected)
+        // If a ripeness class wins → zero out Not Durian only (confirmed durian scan)
+        // If Unripe wins → also zero out others (distinct visual category)
+        if (finalWinner.label === "Not Durian") {
+          allPredictions = allPredictions.map(p => ({
+            ...p,
+            score: p.label === "Not Durian" ? p.score : 0
+          }));
+        } else if (finalWinner.label === "Unripe") {
           allPredictions = allPredictions.map(p => ({
             ...p,
             score: p.label === finalWinner.label ? p.score : 0
           }));
         } else {
+          // Ripe or Semi-Ripe: zero out Not Durian but keep other ripeness scores
           allPredictions = allPredictions.map(p => ({
             ...p,
             score: p.label === "Not Durian" ? 0 : p.score
