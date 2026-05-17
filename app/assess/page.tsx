@@ -152,7 +152,19 @@ export default function AssessPage() {
       const { modelStore } = await import("@/lib/modelStore");
       const storeModel = modelStore.get(selectedModelName);
       if (storeModel) {
-        console.log(`[Model Store HIT] Instant load from home page preload: ${selectedModelName}`);
+        console.log(`[Model Store HIT] Pre-loaded by home page: ${selectedModelName} — running warm-up`);
+        // Home page loaded the model but never ran inference, so WASM buffers need priming.
+        // 1 warm-up run (~200-500ms) prevents the all-zeros "dead engine" error.
+        const dummyInput = tf.randomNormal([1, 224, 224, 3]);
+        try {
+          const warmupOut = storeModel.predict(dummyInput);
+          tf.dispose(warmupOut);
+          console.log(`[Model Store] Warm-up complete for: ${selectedModelName}`);
+        } catch (warmupErr) {
+          console.warn("[Model Store] Warm-up failed, proceeding anyway:", warmupErr);
+        } finally {
+          tf.dispose(dummyInput);
+        }
         modelCacheRef.current.set(selectedModelName, storeModel);
         setModel(storeModel);
         setIsModelLoading(false);
