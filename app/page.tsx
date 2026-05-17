@@ -109,7 +109,51 @@ export default function Home() {
 
     loadData();
     window.addEventListener('focus', loadData);
-    return () => window.removeEventListener('focus', loadData);
+
+    // === BACKGROUND MODEL PRE-CACHING ===
+    // Silently fetch all 3 model binaries into the Cache API on app load.
+    // This means the Assess page gets instant [Cache API HIT] on every model —
+    // no 60-75MB download delay when the user taps "Identify Ripeness".
+    const preloadModels = async () => {
+      if (typeof caches === 'undefined') return; // SSR / unsupported browsers
+      const HF = 'https://huggingface.co/CodingWithBars/durian-care-pwa/resolve/main';
+      const models = [
+        `${HF}/durian_mobilenetv2_tinyvit.tflite`,
+        `${HF}/durian_densenet121_tinyvit_test2.tflite`,
+        `${HF}/durian_nasnetmobile_tinyvit_test5.tflite`,
+      ];
+      const CACHE_NAME = 'duriancare-models-v1';
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        for (const url of models) {
+          const existing = await cache.match(url);
+          if (existing) {
+            console.log(`[Model Preload] Already cached: ${url.split('/').pop()}`);
+            continue; // skip — already in cache
+          }
+          console.log(`[Model Preload] Fetching in background: ${url.split('/').pop()}`);
+          try {
+            const res = await fetch(url);
+            if (res.ok) {
+              await cache.put(url, res);
+              console.log(`[Model Preload] Cached: ${url.split('/').pop()}`);
+            }
+          } catch (e) {
+            console.warn(`[Model Preload] Failed (offline?): ${url.split('/').pop()}`);
+          }
+        }
+      } catch (e) {
+        console.warn('[Model Preload] Cache API unavailable:', e);
+      }
+    };
+
+    // Delay slightly so critical UI data loads first, then run model preloading in background
+    const preloadTimer = setTimeout(preloadModels, 2000);
+
+    return () => {
+      window.removeEventListener('focus', loadData);
+      clearTimeout(preloadTimer);
+    };
   }, []);
 
   if (showOnboarding === null) return null;
