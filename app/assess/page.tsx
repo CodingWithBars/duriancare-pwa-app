@@ -622,106 +622,108 @@ export default function AssessPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-xl flex items-end justify-center p-4 pb-8"
+            className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-md flex items-center justify-center p-5"
           >
             <motion.div
-              initial={{ y: 80, opacity: 0, scale: 0.96 }}
+              initial={{ y: 50, opacity: 0, scale: 0.95 }}
               animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: 80, opacity: 0, scale: 0.96 }}
-              transition={{ type: 'spring', damping: 22, stiffness: 260 }}
-              className="w-full max-w-sm bg-[#0f1117] rounded-[32px] p-6 text-white shadow-2xl border border-white/10 relative overflow-hidden"
+              exit={{ y: 50, opacity: 0, scale: 0.95 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="w-full max-w-sm bg-slate-900 rounded-[36px] p-6 text-white shadow-2xl border border-white/10 relative overflow-hidden"
             >
-              {/* Glow accent */}
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+              {/* Premium Top Glow */}
+              <div className="absolute -top-20 -right-20 w-44 h-44 bg-emerald-500/15 rounded-full blur-[80px] pointer-events-none" />
+              <div className="absolute -bottom-20 -left-20 w-44 h-44 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none" />
 
               {/* Header */}
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                    <Cpu size={20} className="text-white" />
+                  <div className="w-11 h-11 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center shadow-inner">
+                    <Cpu size={20} className="text-emerald-400" />
                   </div>
                   <div>
-                    <p className="font-black text-sm tracking-tight">DurianCare AI Scanner</p>
-                    <p className="text-[10px] text-slate-400 font-medium">Quick-start guide</p>
+                    <h3 className="font-black text-sm uppercase tracking-wider text-white">DURIANCARE AI</h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Field Assistant Guide</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowOnboarding(false)}
-                  className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white/60 active:scale-90 transition-all"
+                  className="w-8 h-8 bg-white/5 border border-white/10 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-400 hover:text-white active:scale-90 transition-all"
                 >
                   <X size={16} />
                 </button>
               </div>
 
+              {/* Informational Cards */}
               <div className="space-y-3 mb-6">
-                {/* Offline Mode */}
-                <div className="flex gap-3 items-start bg-white/5 rounded-2xl p-3.5 border border-white/8">
-                  <div className="w-8 h-8 bg-amber-500/20 rounded-xl flex items-center justify-center shrink-0">
-                    <WifiOff size={14} className="text-amber-400" />
+                {/* Background preloading */}
+                <div className="flex gap-3.5 items-start bg-white/[0.02] border border-white/5 rounded-[24px] p-4">
+                  <div className="w-9 h-9 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center shrink-0">
+                    <Cpu size={16} className="text-blue-400" />
                   </div>
-                  <div>
-                    <p className="text-[12px] font-bold text-white mb-0.5">Offline Mode</p>
-                    <p className="text-[10px] text-slate-400 leading-relaxed">
-                      AI inference runs fully on-device. Scans taken offline are queued and synced to the cloud when you reconnect.
+                  <div className="space-y-1">
+                    <p className="text-xs font-black uppercase tracking-wider text-white">Instant Model Preload</p>
+                    <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
+                      All models are <span className="text-emerald-400 font-bold">silently preloaded and initialized</span> in the background on startup. Toggling between models is near-instant, saving precious seconds in the field.
                     </p>
                   </div>
                 </div>
 
-                {/* Model Preloading */}
-                <div className="flex gap-3 items-start bg-white/5 rounded-2xl p-3.5 border border-white/8">
-                  <div className="w-8 h-8 bg-blue-500/20 rounded-xl flex items-center justify-center shrink-0">
-                    <Cpu size={14} className="text-blue-400" />
+                {/* Offline-First */}
+                <div className="flex gap-3.5 items-start bg-white/[0.02] border border-white/5 rounded-[24px] p-4">
+                  <div className="w-9 h-9 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center shrink-0">
+                    <WifiOff size={16} className="text-amber-400" />
                   </div>
-                  <div>
-                    <p className="text-[12px] font-bold text-white mb-0.5">Loading AI Models</p>
-                    <p className="text-[10px] text-slate-400 leading-relaxed">
-                      First load downloads ~60–75 MB from the cloud. After that, <span className="text-white font-bold">models are cached locally</span> — switching between all 3 is instant on every future visit.
+                  <div className="space-y-1">
+                    <p className="text-xs font-black uppercase tracking-wider text-white">100% Offline-First</p>
+                    <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
+                      AI diagnostic calculations execute entirely on-device. Scans recorded offline queue automatically and sync when you re-establish network connection.
                     </p>
                   </div>
                 </div>
 
-                {/* 3 Models */}
-                <div className="flex gap-3 items-start bg-white/5 rounded-2xl p-3.5 border border-white/8">
-                  <div className="w-8 h-8 bg-emerald-500/20 rounded-xl flex items-center justify-center shrink-0">
-                    <Activity size={14} className="text-emerald-400" />
+                {/* Accuracy Bins / Models info */}
+                <div className="flex gap-3.5 items-start bg-white/[0.02] border border-white/5 rounded-[24px] p-4">
+                  <div className="w-9 h-9 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center shrink-0">
+                    <Activity size={16} className="text-emerald-400" />
                   </div>
-                  <div>
-                    <p className="text-[12px] font-bold text-white mb-1">3 Available Models</p>
-                    <div className="space-y-1">
+                  <div className="space-y-2 flex-1">
+                    <p className="text-xs font-black uppercase tracking-wider text-white">Selectable Architectures</p>
+                    <div className="grid gap-1.5">
                       {[
-                        { name: 'MobileNetV2', tag: 'Default · Best Overall', color: 'bg-emerald-500/30 text-emerald-300' },
-                        { name: 'DenseNet121', tag: 'High Accuracy', color: 'bg-blue-500/30 text-blue-300' },
-                        { name: 'NASNetMobile', tag: 'Balanced', color: 'bg-violet-500/30 text-violet-300' },
+                        { name: 'MobileNetV2', tag: 'Best Overall', color: 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' },
+                        { name: 'DenseNet121', tag: 'High Accuracy', color: 'bg-blue-500/10 border border-blue-500/20 text-blue-400' },
+                        { name: 'NASNetMobile', tag: 'Balanced', color: 'bg-violet-500/10 border border-violet-500/20 text-violet-400' },
                       ].map(m => (
                         <div key={m.name} className="flex items-center justify-between">
-                          <p className="text-[10px] text-slate-300 font-medium">{m.name}</p>
-                          <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${m.color}`}>{m.tag}</span>
+                          <span className="text-[10px] text-slate-300 font-bold">{m.name}</span>
+                          <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border ${m.color}`}>{m.tag}</span>
                         </div>
                       ))}
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-1.5">Switch models via the <span className="text-white font-bold">⊟ Settings</span> button (top-right).</p>
                   </div>
                 </div>
 
                 {/* Scan Tips */}
-                <div className="flex gap-3 items-start bg-white/5 rounded-2xl p-3.5 border border-white/8">
-                  <div className="w-8 h-8 bg-rose-500/20 rounded-xl flex items-center justify-center shrink-0">
-                    <Leaf size={14} className="text-rose-400" />
+                <div className="flex gap-3.5 items-start bg-white/[0.02] border border-white/5 rounded-[24px] p-4">
+                  <div className="w-9 h-9 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center justify-center shrink-0">
+                    <Leaf size={16} className="text-rose-400" />
                   </div>
-                  <div>
-                    <p className="text-[12px] font-bold text-white mb-0.5">Scan Tips</p>
-                    <p className="text-[10px] text-slate-400 leading-relaxed">
-                      Use <span className="text-white font-bold">Batch Mode (3×)</span> for highest accuracy — position the durian inside the green bounding box from 3 angles.
+                  <div className="space-y-1">
+                    <p className="text-xs font-black uppercase tracking-wider text-white">Batch Diagnosis (3×)</p>
+                    <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
+                      Enable <span className="text-white font-bold">Batch Mode</span> in Settings to scan a fruit from 3 sides. This filters camera noise and ensures optimal diagnostic precision.
                     </p>
                   </div>
                 </div>
               </div>
 
+              {/* Premium Button */}
               <button
                 onClick={() => setShowOnboarding(false)}
-                className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 active:scale-95 transition-all rounded-2xl font-black text-sm text-white shadow-lg shadow-emerald-500/30 tracking-wide"
+                className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] transition-all rounded-2xl font-black text-xs text-white shadow-lg shadow-emerald-500/20 tracking-widest uppercase"
               >
-                Got it — Start Scanning
+                Launch Scanner
               </button>
             </motion.div>
           </motion.div>
