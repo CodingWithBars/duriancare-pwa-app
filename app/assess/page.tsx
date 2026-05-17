@@ -68,6 +68,9 @@ export default function AssessPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  // In-memory model cache: avoids re-downloading/re-initializing when switching models
+  const modelCacheRef = useRef<Map<string, tfliteType.TFLiteModel>>(new Map());
+
   // Models are hosted on Hugging Face (supports CORS and > 50MB files)
   // ⚠️ NOTE: If your Hugging Face username is different, please update this URL.
   const HF_REPO_URL = "https://huggingface.co/CodingWithBars/durian-care-pwa/resolve/main";
@@ -138,59 +141,81 @@ export default function AssessPage() {
   }, [capturedImage, stream]);
 
   // === AI MODEL BOOTSTRAP ===
-  // Dynamically imports @tensorflow/tfjs-tflite and loads the local .tflite model
+  // Loads TFLite model with two caching layers:
+  //   1. In-memory (modelCacheRef): instant switch back to a previously loaded model
+  //   2. Cache API (browser): avoids re-downloading 60-75 MB on page refresh
   useEffect(() => {
     const loadModel = async () => {
+      // ── Layer 1: In-memory cache hit ──
+      const cached = modelCacheRef.current.get(selectedModelName);
+      if (cached) {
+        console.log(`[Cache HIT] Reusing in-memory model: ${selectedModelName}`);
+        setModel(cached);
+        setIsModelLoading(false);
+        setModelError(null);
+        return;
+      }
+
       setIsModelLoading(true);
       setModelError(null);
       try {
         const tflite = await import("@tensorflow/tfjs-tflite");
-        
-        // Use local assets now that they are tracked in Git again
-        const wasmPath = '/tflite/';
-        console.log("Setting TFLite WASM Path (Local):", wasmPath);
-        tflite.setWasmPath(wasmPath);
-        
+        tflite.setWasmPath('/tflite/');
+
         const selectedModelFile = modelOptions.find(m => m.label === selectedModelName)?.file || '/durian_hybrid_model.tflite';
 
-        // Use numThreads: 1 to avoid potential multi-threading issues that cause Aborted() crashes
-        const loadedModel = await tflite.loadTFLiteModel(selectedModelFile, {
-          numThreads: 1
-        });
-        
-        // Safety check: Ensure the model's internal WASM module is actually ready
-        // (This prevents the '_malloc' undefined error)
+        // ── Layer 2: Cache API — serve model binary from local browser cache ──
+        const CACHE_NAME = 'duriancare-models-v1';
+        let modelBuffer: ArrayBuffer | null = null;
+        try {
+          const cache = await caches.open(CACHE_NAME);
+          const cachedResponse = await cache.match(selectedModelFile);
+          if (cachedResponse) {
+            console.log(`[Cache API HIT] Loading model from browser cache: ${selectedModelName}`);
+            modelBuffer = await cachedResponse.arrayBuffer();
+          } else {
+            console.log(`[Cache API MISS] Fetching model from network: ${selectedModelFile}`);
+            const networkResponse = await fetch(selectedModelFile);
+            if (!networkResponse.ok) throw new Error(`HTTP ${networkResponse.status}`);
+            // Clone before consuming — cache the original, read from the clone
+            await cache.put(selectedModelFile, networkResponse.clone());
+            modelBuffer = await networkResponse.arrayBuffer();
+            console.log(`[Cache API] Model stored in browser cache for future use.`);
+          }
+        } catch (cacheErr) {
+          console.warn('[Cache API] Not available, falling back to direct URL load:', cacheErr);
+        }
+
+        // Load model from ArrayBuffer (cached) or URL (fallback)
+        const loadedModel = modelBuffer
+          ? await tflite.loadTFLiteModel(modelBuffer, { numThreads: 1 })
+          : await tflite.loadTFLiteModel(selectedModelFile, { numThreads: 1 });
+
         if (!loadedModel || (loadedModel as any)._model === null) {
           throw new Error("TFLite engine failed to initialize. Please refresh.");
         }
-        
-        // === WASM WARM-UP ===
-        // TFLite WASM often returns all zeros on the first few inferences after loading.
-        // Running multiple dummy predictions with random data "primes" the internal buffers.
+
+        // === WASM WARM-UP (1 run is sufficient to prime the WASM buffers) ===
         const dummyInput = tf.randomNormal([1, 224, 224, 3]);
         try {
-          for (let i = 0; i < 3; i++) {
-            const warmupOutput = loadedModel.predict(dummyInput);
-            tf.dispose(warmupOutput);
-          }
-          console.log("WASM engine warm-up (3 runs) complete.");
+          const warmupOutput = loadedModel.predict(dummyInput);
+          tf.dispose(warmupOutput);
+          console.log("WASM engine warm-up (1 run) complete.");
         } catch (warmupErr) {
-          console.warn("Warm-up inference failed, but proceeding anyway:", warmupErr);
+          console.warn("Warm-up inference failed, proceeding anyway:", warmupErr);
         } finally {
           tf.dispose(dummyInput);
         }
 
+        // Store in in-memory cache for instant model switching
+        modelCacheRef.current.set(selectedModelName, loadedModel);
         setModel(loadedModel);
-        
-        // Debug model structure
+
         console.log("Model loaded successfully:", selectedModelName);
-        console.log("Model Inputs Metadata:", JSON.stringify(loadedModel.inputs, null, 2));
-        console.log("Model Outputs Metadata:", JSON.stringify(loadedModel.outputs, null, 2));
-        
         setIsModelLoading(false);
       } catch (err) {
         console.error("Error loading TFLite model:", err);
-        setModelError("Failed to initialize AI engine. Please ensure models are uploaded to Supabase.");
+        setModelError("Failed to initialize AI engine. Check connection or refresh.");
         setIsModelLoading(false);
       }
     };
@@ -417,8 +442,8 @@ export default function AssessPage() {
           setIsSheetMinimized(false);
         };
 
-        const delay = Math.floor(Math.random() * 4000) + 1000; // 1 to 5 seconds
-        setTimeout(finalizeResult, delay);
+        // Field-optimized: show result immediately after inference completes
+        finalizeResult();
       }
 
       // === CRITICAL GPU MEMORY CLEANUP ===
@@ -614,7 +639,7 @@ export default function AssessPage() {
                   <div>
                     <p className="text-[12px] font-bold text-white mb-0.5">Loading AI Models</p>
                     <p className="text-[10px] text-slate-400 leading-relaxed">
-                      Models are fetched from Hugging Face on first use (~60–75 MB each). Once loaded, switching between the 3 best-performing models is instant.
+                      First load downloads ~60–75 MB from the cloud. After that, <span className="text-white font-bold">models are cached locally</span> — switching between all 3 is instant on every future visit.
                     </p>
                   </div>
                 </div>
