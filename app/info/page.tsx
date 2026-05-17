@@ -114,7 +114,7 @@ export default function InfoPage() {
   const models = [
     {
       name: "MobileNetV2",
-      badge: "Fastest",
+      badge: "Default · Best Overall",
       badgeColor: "bg-emerald-100 text-emerald-700",
       color: "bg-emerald-600",
       cnnRole: "Uses depthwise separable convolutions to extract lightweight spatial features — ideal for real-time mobile inference.",
@@ -123,7 +123,7 @@ export default function InfoPage() {
     },
     {
       name: "DenseNet121",
-      badge: "Most Accurate",
+      badge: "High Accuracy",
       badgeColor: "bg-blue-100 text-blue-700",
       color: "bg-blue-600",
       cnnRole: "Dense block connections reuse all prior feature maps, enabling the model to detect fine-grained thorn and color cues.",

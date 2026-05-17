@@ -59,7 +59,7 @@ export default function AssessPage() {
     "environment"
   );
   const [model, setModel] = useState<tfliteType.TFLiteModel | null>(null);
-  const [selectedModelName, setSelectedModelName] = useState("TinyViT-5m + DenseNet121");
+  const [selectedModelName, setSelectedModelName] = useState("TinyViT-5m + MobileNetV2");
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [modelError, setModelError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
@@ -653,8 +653,8 @@ export default function AssessPage() {
                     <p className="text-[12px] font-bold text-white mb-1">3 Available Models</p>
                     <div className="space-y-1">
                       {[
-                        { name: 'MobileNetV2', tag: 'Fastest', color: 'bg-emerald-500/30 text-emerald-300' },
-                        { name: 'DenseNet121', tag: 'Most Accurate', color: 'bg-blue-500/30 text-blue-300' },
+                        { name: 'MobileNetV2', tag: 'Default · Best Overall', color: 'bg-emerald-500/30 text-emerald-300' },
+                        { name: 'DenseNet121', tag: 'High Accuracy', color: 'bg-blue-500/30 text-blue-300' },
                         { name: 'NASNetMobile', tag: 'Balanced', color: 'bg-violet-500/30 text-violet-300' },
                       ].map(m => (
                         <div key={m.name} className="flex items-center justify-between">
