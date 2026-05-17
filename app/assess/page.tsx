@@ -59,7 +59,7 @@ export default function AssessPage() {
     "environment"
   );
   const [model, setModel] = useState<tfliteType.TFLiteModel | null>(null);
-  const [selectedModelName, setSelectedModelName] = useState("TinyViT-5m + MobileNetV2");
+  const [selectedModelName, setSelectedModelName] = useState("TinyViT-5m + DenseNet121");
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [modelError, setModelError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
