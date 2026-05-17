@@ -141,12 +141,26 @@ export default function AssessPage() {
   }, [capturedImage, stream]);
 
   // === AI MODEL BOOTSTRAP ===
-  // Loads TFLite model with two caching layers:
-  //   1. In-memory (modelCacheRef): instant switch back to a previously loaded model
-  //   2. Cache API (browser): avoids re-downloading 60-75 MB on page refresh
+  // Three-layer resolution (fastest to slowest):
+  //   0. Global modelStore: pre-initialized by home page — INSTANT (~0ms)
+  //   1. Component modelCacheRef: same-session model switch — INSTANT (~0ms)
+  //   2. Cache API binary: avoids re-download, needs WASM re-init (~1-2s)
+  //   3. Network fetch: first-ever load (~10-30s depending on connection)
   useEffect(() => {
     const loadModel = async () => {
-      // ── Layer 1: In-memory cache hit ──
+      // ── Layer 0: Global store (pre-loaded by home page) ──
+      const { modelStore } = await import("@/lib/modelStore");
+      const storeModel = modelStore.get(selectedModelName);
+      if (storeModel) {
+        console.log(`[Model Store HIT] Instant load from home page preload: ${selectedModelName}`);
+        modelCacheRef.current.set(selectedModelName, storeModel);
+        setModel(storeModel);
+        setIsModelLoading(false);
+        setModelError(null);
+        return;
+      }
+
+      // ── Layer 1: In-memory component cache ──
       const cached = modelCacheRef.current.get(selectedModelName);
       if (cached) {
         console.log(`[Cache HIT] Reusing in-memory model: ${selectedModelName}`);
@@ -177,7 +191,6 @@ export default function AssessPage() {
             console.log(`[Cache API MISS] Fetching model from network: ${selectedModelFile}`);
             const networkResponse = await fetch(selectedModelFile);
             if (!networkResponse.ok) throw new Error(`HTTP ${networkResponse.status}`);
-            // Clone before consuming — cache the original, read from the clone
             await cache.put(selectedModelFile, networkResponse.clone());
             modelBuffer = await networkResponse.arrayBuffer();
             console.log(`[Cache API] Model stored in browser cache for future use.`);
@@ -186,7 +199,7 @@ export default function AssessPage() {
           console.warn('[Cache API] Not available, falling back to direct URL load:', cacheErr);
         }
 
-        // Load model from ArrayBuffer (cached) or URL (fallback)
+        // ── Layer 3: Full TFLite initialization (network fallback) ──
         const loadedModel = modelBuffer
           ? await tflite.loadTFLiteModel(modelBuffer, { numThreads: 1 })
           : await tflite.loadTFLiteModel(selectedModelFile, { numThreads: 1 });
@@ -195,7 +208,7 @@ export default function AssessPage() {
           throw new Error("TFLite engine failed to initialize. Please refresh.");
         }
 
-        // === WASM WARM-UP (1 run is sufficient to prime the WASM buffers) ===
+        // === WASM WARM-UP (1 run to prime the WASM buffers) ===
         const dummyInput = tf.randomNormal([1, 224, 224, 3]);
         try {
           const warmupOutput = loadedModel.predict(dummyInput);
@@ -207,8 +220,9 @@ export default function AssessPage() {
           tf.dispose(dummyInput);
         }
 
-        // Store in in-memory cache for instant model switching
+        // Store in both caches for instant future access
         modelCacheRef.current.set(selectedModelName, loadedModel);
+        modelStore.set(selectedModelName, loadedModel);
         setModel(loadedModel);
 
         console.log("Model loaded successfully:", selectedModelName);

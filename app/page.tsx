@@ -110,49 +110,83 @@ export default function Home() {
     loadData();
     window.addEventListener('focus', loadData);
 
-    // === BACKGROUND MODEL PRE-CACHING ===
-    // Silently fetch all 3 model binaries into the Cache API on app load.
-    // This means the Assess page gets instant [Cache API HIT] on every model —
-    // no 60-75MB download delay when the user taps "Identify Ripeness".
-    const preloadModels = async () => {
-      if (typeof caches === 'undefined') return; // SSR / unsupported browsers
-      const HF = 'https://huggingface.co/CodingWithBars/durian-care-pwa/resolve/main';
-      const models = [
-        `${HF}/durian_mobilenetv2_tinyvit.tflite`,
-        `${HF}/durian_densenet121_tinyvit_test2.tflite`,
-        `${HF}/durian_nasnetmobile_tinyvit_test5.tflite`,
-      ];
-      const CACHE_NAME = 'duriancare-models-v1';
+    // === BACKGROUND FULL MODEL INITIALIZATION ===
+    // Fully loads all 3 TFLite models (WASM init + binary parse) into the module-level
+    // modelStore singleton. Since Next.js client-side routing never reloads modules,
+    // the assess page finds all models already in the store and opens INSTANTLY.
+    const initModels = async () => {
       try {
-        const cache = await caches.open(CACHE_NAME);
-        for (const url of models) {
-          const existing = await cache.match(url);
-          if (existing) {
-            console.log(`[Model Preload] Already cached: ${url.split('/').pop()}`);
-            continue; // skip — already in cache
+        const { modelStore } = await import("@/lib/modelStore");
+        const tflite = await import("@tensorflow/tfjs-tflite");
+        tflite.setWasmPath('/tflite/');
+
+        const HF = 'https://huggingface.co/CodingWithBars/durian-care-pwa/resolve/main';
+        const modelList = [
+          { label: "TinyViT-5m + MobileNetV2",   file: `${HF}/durian_mobilenetv2_tinyvit.tflite` },
+          { label: "TinyViT-5m + DenseNet121",   file: `${HF}/durian_densenet121_tinyvit_test2.tflite` },
+          { label: "TinyViT-5m + NASNetMobile",  file: `${HF}/durian_nasnetmobile_tinyvit_test5.tflite` },
+        ];
+        const CACHE_NAME = 'duriancare-models-v1';
+
+        for (const { label, file } of modelList) {
+          // Skip if already loaded or currently being loaded by another effect
+          if (modelStore.has(label) || modelStore.isLoading(label)) {
+            console.log(`[Model Preload] Already ready/loading: ${label}`);
+            continue;
           }
-          console.log(`[Model Preload] Fetching in background: ${url.split('/').pop()}`);
+
+          modelStore.markLoading(label);
+          console.log(`[Model Preload] Initializing: ${label}`);
+
           try {
-            const res = await fetch(url);
-            if (res.ok) {
-              await cache.put(url, res);
-              console.log(`[Model Preload] Cached: ${url.split('/').pop()}`);
+            // Serve from Cache API (fast), or fetch + cache for next time
+            let modelBuffer: ArrayBuffer | null = null;
+            try {
+              const cache = await caches.open(CACHE_NAME);
+              const cachedResp = await cache.match(file);
+              if (cachedResp) {
+                console.log(`[Model Preload] Cache API HIT: ${label}`);
+                modelBuffer = await cachedResp.arrayBuffer();
+              } else {
+                console.log(`[Model Preload] Fetching from network: ${label}`);
+                const netResp = await fetch(file);
+                if (netResp.ok) {
+                  await cache.put(file, netResp.clone());
+                  modelBuffer = await netResp.arrayBuffer();
+                }
+              }
+            } catch (cacheErr) {
+              console.warn('[Model Preload] Cache API unavailable, using URL directly');
             }
-          } catch (e) {
-            console.warn(`[Model Preload] Failed (offline?): ${url.split('/').pop()}`);
+
+            // Full TFLite engine initialization
+            const loadedModel = modelBuffer
+              ? await tflite.loadTFLiteModel(modelBuffer, { numThreads: 1 })
+              : await tflite.loadTFLiteModel(file, { numThreads: 1 });
+
+            if (!loadedModel || (loadedModel as any)._model === null) {
+              throw new Error('WASM engine returned null model');
+            }
+
+            modelStore.set(label, loadedModel);
+            console.log(`[Model Preload] ✓ READY: ${label} (store size: ${modelStore.size()})`);
+          } catch (err) {
+            console.warn(`[Model Preload] Failed for ${label}:`, err);
+          } finally {
+            modelStore.unmarkLoading(label);
           }
         }
-      } catch (e) {
-        console.warn('[Model Preload] Cache API unavailable:', e);
+      } catch (err) {
+        console.warn('[Model Preload] Init failed (offline or WASM error):', err);
       }
     };
 
-    // Delay slightly so critical UI data loads first, then run model preloading in background
-    const preloadTimer = setTimeout(preloadModels, 2000);
+    // Start after 1.5s — UI and Supabase data loads first, then models in background
+    const modelTimer = setTimeout(initModels, 1500);
 
     return () => {
       window.removeEventListener('focus', loadData);
-      clearTimeout(preloadTimer);
+      clearTimeout(modelTimer);
     };
   }, []);
 
