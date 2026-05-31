@@ -807,7 +807,7 @@ export default function AssessPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="absolute top-full right-0 mt-3 w-64 bg-black/80 backdrop-blur-3xl border border-white/10 rounded-3xl p-5 flex flex-col gap-5 z-50 shadow-2xl origin-top-right"
+                className="absolute top-full right-0 mt-3 w-64 bg-[#0a0a0a] border border-white/5 rounded-[24px] p-5 flex flex-col gap-5 z-50 shadow-2xl origin-top-right"
               >
                 <div>
                   <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3 px-2">Hardware</p>
@@ -816,7 +816,7 @@ export default function AssessPage() {
                     className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-colors ${
                       isTorchOn
                         ? "bg-amber-400 text-black font-black"
-                        : "bg-white/10 text-white font-medium"
+                        : "bg-[#111111] text-white font-medium"
                     }`}
                   >
                     <span className="text-xs">{isTorchOn ? "Flash On" : "Flash Off"}</span>
@@ -826,39 +826,19 @@ export default function AssessPage() {
 
                 <div>
                   <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3 px-2">Scan Mode</p>
-                  <div className="flex bg-white/10 p-1.5 rounded-2xl gap-1">
+                  <div className="flex bg-[#111111] p-1.5 rounded-2xl gap-1">
                     <button 
                       onClick={() => setScanMode('single')}
-                      className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${scanMode === 'single' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
+                      className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${scanMode === 'single' ? 'bg-white text-black shadow-lg' : 'text-white/40 hover:text-white/60'}`}
                     >
                       Single
                     </button>
                     <button 
                       onClick={() => setScanMode('batch')}
-                      className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${scanMode === 'batch' ? 'bg-white text-black shadow-lg' : 'text-white/40'}`}
+                      className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${scanMode === 'batch' ? 'bg-white text-black shadow-lg' : 'text-white/40 hover:text-white/60'}`}
                     >
                       Batch (3x)
                     </button>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3 px-2">AI Model</p>
-                  <div className="space-y-1.5">
-                    {modelOptions.map((opt) => (
-                      <button
-                        key={opt.label}
-                        onClick={() => {
-                          setSelectedModelName(opt.label);
-                          setIsSettingsOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-3.5 rounded-2xl text-[10px] font-black uppercase transition-all ${
-                          selectedModelName === opt.label ? 'bg-emerald-500 text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
-                        }`}
-                      >
-                        {opt.label.replace('TinyViT-5m + ', '')}
-                      </button>
-                    ))}
                   </div>
                 </div>
               </motion.div>
@@ -917,72 +897,72 @@ export default function AssessPage() {
           </div>
         </div>
 
-        <div className="absolute bottom-0 inset-x-0 z-40 p-10 pb-16 flex flex-col items-center gap-8 bg-gradient-to-t from-black via-black/20 to-transparent">
-          {!capturedImage && (
-            <div className="flex items-center gap-6 bg-black/60 backdrop-blur-2xl px-6 py-3 rounded-full border border-white/10 shadow-2xl">
-              <button
-                onClick={() => handleZoom(zoomLevel - 1)}
-                className="text-white/60"
-              >
-                <Minimize size={20} />
-              </button>
-              <div className="flex gap-4">
-                {[1, 2, 5].map((val) => (
-                  <button
-                    key={val}
-                    onClick={() => handleZoom(val)}
-                    className={`text-[10px] font-black w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                      Math.round(zoomLevel) === val
-                        ? "bg-emerald-500 text-white"
-                        : "text-white/40"
-                    }`}
-                  >
-                    {val}x
-                  </button>
-                ))}
+        <div className="absolute bottom-0 inset-x-0 z-40 bg-[#0a0a0a] backdrop-blur-3xl flex flex-col items-center pt-6 pb-12 rounded-t-[40px] border-t border-white/5 shadow-[0_-20px_40px_rgba(0,0,0,0.5)]">
+          {!capturedImage ? (
+            <div className="w-full flex flex-col gap-8 px-6">
+              
+              {/* Centered AI Models Row */}
+              <div className="flex items-center justify-center w-full">
+                <div className="flex bg-white/5 p-1 rounded-full border border-white/10 shadow-inner gap-1 w-full max-w-[320px]">
+                  {modelOptions.map((opt) => {
+                    const isSelected = selectedModelName === opt.label;
+                    const shortName = opt.label
+                      .replace('TinyViT-5m + ', '')
+                      .replace('NetMobile', 'Net')
+                      .replace('NetV2', 'Net')
+                      .replace('121', '');
+                      
+                    let activeBg = 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]';
+                    if (opt.label.includes('DenseNet121')) {
+                      activeBg = 'bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]';
+                    } else if (opt.label.includes('NASNetMobile')) {
+                      activeBg = 'bg-violet-500 text-white shadow-[0_0_15px_rgba(139,92,246,0.4)]';
+                    }
+
+                    return (
+                      <button
+                        key={opt.label}
+                        onClick={() => setSelectedModelName(opt.label)}
+                        className={`flex-1 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] transition-all text-center ${
+                          isSelected ? activeBg : 'text-white/50 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        {shortName}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <button
-                onClick={() => handleZoom(zoomLevel + 1)}
-                className="text-white/60"
-              >
-                <Maximize size={20} />
-              </button>
+
+              {/* Capture Row */}
+              <div className="flex items-center justify-between w-full px-4">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white border border-white/10 hover:bg-white/10 active:scale-90 transition-all"
+                >
+                  <ImageIcon size={20} className="text-white/70" />
+                </button>
+
+                <button
+                  onClick={capturePhoto}
+                  disabled={isModelLoading || !!modelError}
+                  className={`relative w-[72px] h-[72px] flex items-center justify-center group ${isModelLoading || !!modelError ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <div className="absolute inset-0 border-[3px] border-white/80 rounded-full scale-[1.15] transition-all" />
+                  <div className={`w-[58px] h-[58px] rounded-full shadow-inner ${isModelLoading ? 'bg-amber-400 animate-pulse' : modelError ? 'bg-red-500' : 'bg-white'}`} />
+                </button>
+
+                <button
+                  onClick={() => setFacingMode(prev => prev === "environment" ? "user" : "environment")}
+                  className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white border border-white/10 hover:bg-white/10 active:scale-90 transition-all"
+                >
+                  <RefreshCw size={20} className="text-white/70" />
+                </button>
+              </div>
+
             </div>
-          )}
-
-          <div className="flex items-center justify-between w-full max-w-[340px] px-6 py-4 bg-white/20 backdrop-blur-3xl rounded-[40px] border border-white/30 shadow-2xl mb-4">
-            {!capturedImage ? (
-              <>
-                <div className="flex-1 flex justify-start items-center">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-90 transition-all border border-white/20"
-                  >
-                    <ImageIcon size={22} />
-                  </button>
-                </div>
-
-                <div className="flex-shrink-0">
-                  <button
-                    onClick={capturePhoto}
-                    disabled={isModelLoading || !!modelError}
-                    className={`relative w-[76px] h-[76px] flex items-center justify-center group ${isModelLoading || !!modelError ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <div className="absolute inset-0 border-[4px] border-white rounded-full scale-110 transition-all" />
-                    <div className={`w-[64px] h-[64px] rounded-full shadow-[0_0_40px_rgba(255,255,255,0.4)] ${isModelLoading ? 'bg-amber-400 animate-pulse' : modelError ? 'bg-red-500' : 'bg-white'}`} />
-                  </button>
-                </div>
-
-                <div className="flex-1 flex justify-end items-center">
-                  <button
-                    onClick={() => setFacingMode(prev => prev === "environment" ? "user" : "environment")}
-                    className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-90 transition-all border border-white/20"
-                  >
-                    <RefreshCw size={22} />
-                  </button>
-                </div>
-              </>
-            ) : (
+          ) : (
+            <div className="w-full max-w-[360px] px-6">
               <button
                 onClick={() => {
                   setCapturedImage(null);
@@ -991,12 +971,12 @@ export default function AssessPage() {
                   setScanResult(null);
                   setIsSheetMinimized(false);
                 }}
-                className="w-full bg-white/10 backdrop-blur-2xl py-5 rounded-3xl text-white font-black border border-white/20 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-2xl"
+                className="w-full bg-white/10 py-5 rounded-3xl text-white font-black border border-white/20 flex items-center justify-center gap-3 active:scale-95 transition-all shadow-2xl"
               >
-                <X size={22} /> Close Scan
+                <X size={22} /> Retake Photo
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
